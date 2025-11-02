@@ -20,9 +20,16 @@ body {
     padding: 2rem;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    color: #272727;
 }
 
 .register-form h2 {
+    text-align: center;
+    color: #272727;
+    margin-bottom: 1.5rem;
+}
+
+.register-form p {
     text-align: center;
     color: #272727;
     margin-bottom: 1.5rem;
@@ -45,20 +52,31 @@ body {
     width: 100%;
     padding: 0.75rem;
     font-size: 1rem;
+    color: #000;
+    background-color: hsl(0, 0%, 96%);
     border: 1px solid #ddd;
     border-radius: 5px;
     box-sizing: border-box;
 }
 
+.navigation {
+    display: flex;
+    gap: 10px;
+}
+.next {
+    min-width: 0;
+    flex: 1 1 0;
+}
+.prev {
+    min-width: 0;
+    flex: 1 1 0;
+}
+
 .submit-btn {
-    width: 100%;
-    padding: 0.75rem;
-    font-size: 1.1rem;
-    font-weight: 600;
+    min-width:0;
     color: #fff;
     background-color: #007bff;
-    border: none;
-    border-radius: 5px;
+    flex: 1 1 0;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }

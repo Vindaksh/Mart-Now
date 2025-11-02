@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import './Login.css';
+
+import Supabase from '../utils/Database';
 
 function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const nav = useNavigate();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         console.log('Login attempt:', { email, password });
-        alert('Login functionality is not built yet!');
-        // !! data to be sent to backend
+        const {data, error} = await Supabase.auth.signInWithPassword({email:email, password:password});
+        if(error){
+            console.log("login failed: ",error);
+        } else if(data.user){
+            console.log("login successful");
+            nav('/');
+        }
     };
 
     return (
@@ -44,10 +52,10 @@ function LoginPage() {
                     Login
                 </button>
 
-                <p className="register-link">
-                    New to Live MART? <Link to="/register">Create an account</Link>
-                </p>
             </form>
+            <p className="register-link">
+                New to Live MART? <Link to="/register">Create an account</Link>
+            </p>
         </div>
     );
 }

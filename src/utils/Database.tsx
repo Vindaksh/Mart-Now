@@ -1,0 +1,47 @@
+import { createClient } from "@supabase/supabase-js";
+import { UserInterface } from "./Interfaces";
+
+const SUPABASE_URL = "https://hopvgsttpmoofwlxhkbx.supabase.co";
+const SUPABASE_KEY = "sb_publishable_1TvVZv76Cmle6-R_J8b08g_55S7cK5C";
+
+const Supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+export const getUserDetails = async (): Promise<UserInterface|null> => {
+    const {data: {session}, error: authError} = await Supabase.auth.getSession();
+    if(authError || !session)
+    {
+        if(authError){console.log("error retreiving session");}
+        return null;
+    }
+    
+    interface userDataInterface {
+        user_id: string,
+        name: string,
+        latitude: number,
+        longitude: number,
+        role: 'customer'|'retailer'|'wholesaler'
+    };
+    const {data, error} = await Supabase.rpc('get_user_data', {user_id:session.user.id}).maybeSingle();
+    const userData_: userDataInterface | null = data as userDataInterface | null;
+    if(!error)
+    {
+        const userData: UserInterface = {
+            id: userData_!.user_id,
+            name: userData_!.name,
+            email: session!.user.email!,
+            location: {
+                latitude: userData_!.latitude,
+                longitude: userData_!.longitude
+            },
+            role: userData_!.role
+        };
+        return userData;
+    }
+    else
+    {
+        console.log("error retreiving user data");
+        return null;
+    }
+};
+
+export default Supabase;
