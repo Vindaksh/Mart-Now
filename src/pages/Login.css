@@ -19,7 +19,8 @@ body {
     background-color: #ffffff;
     padding: 2rem;
     border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(190, 190, 190, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    color: #272727;
 }
 
 .login-form h2 {
@@ -50,6 +51,20 @@ body {
     border-radius: 5px;
     box-sizing: border-box;
 }
+
+.navigation {
+    display: flex;
+    gap: 10px;
+}
+.next {
+    min-width: 0;
+    flex: 1 1 0;
+}
+.prev {
+    min-width: 0;
+    flex: 1 1 0;
+}
+
 
 .submit-btn {
     width: 100%;

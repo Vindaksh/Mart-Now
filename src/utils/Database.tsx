@@ -23,7 +23,7 @@ export const getUserDetails = async (): Promise<UserInterface|null> => {
     };
     const {data, error} = await Supabase.rpc('get_user_data', {user_id:session.user.id}).maybeSingle();
     const userData_: userDataInterface | null = data as userDataInterface | null;
-    if(!error)
+    if(data)
     {
         const userData: UserInterface = {
             id: userData_!.user_id,

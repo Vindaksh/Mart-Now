@@ -1,26 +1,34 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Login.css';
+import TextDivider from '../components/TextDivider';
 
 import Supabase from '../utils/Database';
+
 
 function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const nav = useNavigate();
-
+    
     const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Login attempt:', { email, password });
         const {data, error} = await Supabase.auth.signInWithPassword({email:email, password:password});
         if(error){
-            console.log("login failed: ",error);
+            console.error("login failed: ",error);
         } else if(data.user){
-            console.log("login successful");
             nav('/');
         }
     };
-
+    
+    const handle3rdPartyLogin = (e) => {
+        const fetchUserData = async () => {
+            const {data, error} = await Supabase.auth.signInWithOAuth({provider:"google", options:{redirectTo:"http://localhost:5173/"}});
+            if(error) {console.error("Sign in failed: ",error);}
+        }
+        fetchUserData();
+    }
+    
     return (
         <div className="login-container">
             <form className="login-form" onSubmit={handleSubmit}>
@@ -48,10 +56,14 @@ function LoginPage() {
                     />
                 </div>
 
-                <button type="submit" className="submit-btn">
-                    Login
-                </button>
+                <div className="navigation">
+                    <button type="submit" className="submit-btn">Login</button>
+                </div>
 
+                <TextDivider text='or' textColor='#000' lineColor='#000' lineThickness={0.5}/>
+                <div className="navigation OAuth">
+                    <button type="button" className="next google" onClick={handle3rdPartyLogin}>Continue with Google</button>
+                </div>
             </form>
             <p className="register-link">
                 New to Live MART? <Link to="/register">Create an account</Link>

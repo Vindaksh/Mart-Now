@@ -4,15 +4,11 @@ interface Step2Props {
     onNext: (e:React.FormEvent<HTMLFormElement>) => void;
     onPrev: () => void;
     onChange: (data: {[key: string]:string}) => void;
+    initialFormData: {role: "Customer"|"Retailer"|"Wholesaler", name: string, latitude: number|null, longitude: number|null};
 }
 
-const Step2: React.FC<Step2Props> = ({ onNext, onPrev, onChange }) => {
-    const [formData, setFormData] = useState({
-        role: "Customer",
-        name: '',
-        latitude: '',
-        longitude: '',
-    });
+const Step2 = ({ onNext, onPrev, onChange, initialFormData }:Step2Props) => {
+    const [formData, setFormData] = useState(initialFormData);
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -52,10 +48,12 @@ const Step2: React.FC<Step2Props> = ({ onNext, onPrev, onChange }) => {
                     required
                 />
             </div>
+            {/* Handle getting location using google api later */}
             {(formData.role!='Customer')&&
             <>
             <div className="form-group">
                 <label htmlFor="latitude">Latitude:</label>
+                {formData.latitude?
                 <input
                     id="latitude"
                     type="number"
@@ -65,9 +63,19 @@ const Step2: React.FC<Step2Props> = ({ onNext, onPrev, onChange }) => {
                     onChange={(e) => handleChange(e)}
                     required
                 />
+                :
+                <input
+                    id="latitude"
+                    type="number"
+                    step={0.000001}
+                    name="latitude" 
+                    onChange={(e) => handleChange(e)}
+                    required
+                />}
             </div>
             <div className="form-group">
                 <label htmlFor="longitude">Longitude:</label>
+                {formData.longitude?
                 <input
                     id="longitude"
                     type="number"
@@ -77,6 +85,15 @@ const Step2: React.FC<Step2Props> = ({ onNext, onPrev, onChange }) => {
                     onChange={(e) => handleChange(e)}
                     required
                 />
+                :<input
+                    id="longitude"
+                    type="number"
+                    step={0.000001}
+                    name="longitude" 
+                    onChange={(e) => handleChange(e)}
+                    required
+                />
+                }
             </div>
             </>
             }
