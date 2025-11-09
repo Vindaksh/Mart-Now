@@ -6,25 +6,23 @@ const SUPABASE_KEY = "sb_publishable_1TvVZv76Cmle6-R_J8b08g_55S7cK5C";
 
 const Supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-export const getUserDetails = async (): Promise<UserInterface|null> => {
-    const {data: {session}, error: authError} = await Supabase.auth.getSession();
-    if(authError || !session)
-    {
-        if(authError){console.log("error retreiving session");}
+export const getUserDetails = async (): Promise<UserInterface | null> => {
+    const { data: { session }, error: authError } = await Supabase.auth.getSession();
+    if (authError || !session) {
+        if (authError) { console.log("error retreiving session"); }
         return null;
     }
-    
+
     interface userDataInterface {
         user_id: string,
         name: string,
         latitude: number,
         longitude: number,
-        role: 'customer'|'retailer'|'wholesaler'
+        role: 'customer' | 'retailer' | 'wholesaler'
     };
-    const {data, error} = await Supabase.rpc('get_user_data', {user_id:session.user.id}).maybeSingle();
+    const { data, error } = await Supabase.rpc('get_user_data', { user_id: session.user.id }).maybeSingle();
     const userData_: userDataInterface | null = data as userDataInterface | null;
-    if(data)
-    {
+    if (data) {
         const userData: UserInterface = {
             id: userData_!.user_id,
             name: userData_!.name,
@@ -37,11 +35,33 @@ export const getUserDetails = async (): Promise<UserInterface|null> => {
         };
         return userData;
     }
-    else
-    {
+    else {
         console.log("error retreiving user data");
         return null;
     }
+};
+
+export const getProductById = async (productId: string) => {
+    const { data, error } = await Supabase
+        .from('products')
+        .select(`
+            id: product_id,
+            name,
+            description,
+            price: wholesaler_price,
+            stock_status: wholesaler_stock,
+            availability_date,
+            image_url 
+        `)
+        .eq('product_id', productId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching product:', error);
+        return null;
+    }
+
+    return data;
 };
 
 export default Supabase;

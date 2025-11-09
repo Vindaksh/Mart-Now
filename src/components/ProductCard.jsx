@@ -1,6 +1,7 @@
 import React from 'react';
 import './ProductCard.css';
 import { useCart } from '../context/CartContext';
+import { Link } from 'react-router-dom';
 
 // receives a single 'product' object as a "prop"
 function ProductCard({ product }) {
@@ -15,35 +16,38 @@ function ProductCard({ product }) {
 
     // runs when button clicked
     const handleAddToCart = () => {
+        e.preventDefault();
         addToCart(product);
     };
 
     return (
-        <div className="product-card">
-            <img src={image_url} alt={name} className="product-card-image" />
-            <div className="product-card-body">
-                <h3 className="product-card-title">{name}</h3>
-                <p className="product-card-price">${price.toFixed(2)}</p>
+        <Link to={'product/${product.id}'} className="product-card-link">
+            <div className="product-card">
+                <img src={image_url} alt={name} className="product-card-image" />
+                <div className="product-card-body">
+                    <h3 className="product-card-title">{name}</h3>
+                    <p className="product-card-price">${price.toFixed(2)}</p>
 
-                {/* show different UI based on stock */}
-                {isInStock ? (
-                    <p className="product-card-stock in-stock">In Stock</p>
-                ) : (
-                    <p className="product-card-stock out-of-stock">
-                        Out of Stock (Available: {availability_date})
-                    </p>
-                )}
+                    {/* show different UI based on stock */}
+                    {isInStock ? (
+                        <p className="product-card-stock in-stock">In Stock</p>
+                    ) : (
+                        <p className="product-card-stock out-of-stock">
+                            Out of Stock (Available: {availability_date})
+                        </p>
+                    )}
 
-                {/* disable the button if the item is out of stock */}
-                <button
-                    className="add-to-cart-btn"
-                    disabled={!isInStock}
-                    onClick={handleAddToCart}
-                >
-                    {isInStock ? 'Add to Cart' : 'Notify Me'}
-                </button>
+                    {/* disable the button if the item is out of stock */}
+                    <button
+                        className="add-to-cart-btn"
+                        disabled={!isInStock}
+                        onClick={handleAddToCart}
+                    >
+                        {isInStock ? 'Add to Cart' : 'Notify Me'}
+                    </button>
+                </div>
             </div>
-        </div>
+        </Link>
     );
 }
 
