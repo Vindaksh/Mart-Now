@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { UserInterface } from "./Interfaces";
+import { UserInterface, UserDataInterface } from "./Interfaces";
 
 const SUPABASE_URL = "https://hopvgsttpmoofwlxhkbx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_1TvVZv76Cmle6-R_J8b08g_55S7cK5C";
