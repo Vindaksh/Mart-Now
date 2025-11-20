@@ -4,7 +4,8 @@ import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import './Checkout.css';
 import {
-    createOrder
+    createOrder,
+    completePayment
 } from "../utils/OrderDB";
 import Supabase, { getUserDetails } from "../utils/Database";
 import { useAuth } from '../context/AuthContext';
@@ -108,11 +109,7 @@ function CheckoutPage() {
         }
 
         // 3) create payment
-        //const payment = await completePayment(totalPrice);
-        const payment = {
-            payment_ref: null,
-            mode: "offline"
-        };
+        const payment = await completePayment(totalPrice);
         if (!payment) {
             alert("Payment creation failed.");
             setLoading(false);
