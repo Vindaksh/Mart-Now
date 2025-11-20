@@ -16,6 +16,7 @@ import { getSavedAddresses, saveAddressForUser } from "../utils/AdressDB";
 import { getLatLongFromAddress } from "../utils/Geo";
 
 function CheckoutPage() {
+    
     const { cartItems, totalPrice, clearCart } = useCart();
     const navigate = useNavigate();
 
@@ -80,97 +81,106 @@ function CheckoutPage() {
     };
 
     const handleSubmitOrder = async (e) => {
-        e.preventDefault();
-        setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-        const user = await getUserDetails();
-        if (!user) {
-            alert("You must be logged in.");
-            setLoading(false);
-            return;
-        }
-
-        // ensure there is at least one cart item
-        if (!cartItems || cartItems.length === 0) {
-            alert("Your cart is empty.");
-            setLoading(false);
-            return;
-        }
-
-        // 1) geocode the final address (try nominatim)
-        const coords = await getLatLongFromAddress(address1, address2, city, pincode, country);
-
-        // 2) optionally save address (only if user checked the box and it's not an existing saved address)
-        if (saveThisAddress && !selectedSavedAddressId) {
-            try {
-                await saveAddressForUser(user.id, { address1, address2, city, pincode, country }, coords);
-                // refresh saved address list
-                const list = await getSavedAddresses(user.id);
-                setSavedAddresses(list || []);
-            } catch (err) {
-                console.warn('Failed to save address, continuing with order', err);
-            }
-        }
-
-        // 3) create payment
-        const payment = await createPayment(totalPrice);
-        if (!payment) {
-            alert("Payment creation failed.");
-            setLoading(false);
-            return;
-        }
-
-        // 4) create order - pass address fields (if your createOrder is strict and does not accept lat/lng,
-        // we will update the order coords separately below)
-        const order = await createOrder(user.id, payment.payment_id, {
-            address1,
-            address2,
-            city,
-            pincode,
-            country
-        });
-        if (!order) {
-            alert("Order creation failed.");
-            setLoading(false);
-            return;
-        }
-
-        // 5) attach lat/lng to order (OrderDB should expose updateOrderLatLng; if not, add it)
-        try {
-            if (coords) {
-                // call a helper in OrderDB (updateOrderLatLng) which you should add if missing
-                // it's safe to call even if you don't store lat/lng in orders (it will fail quietly)
-                try {
-                    // dynamic import so it doesn't crash if function doesn't exist
-                    const OrderDB = await import('../utils/OrderDB');
-                    if (OrderDB.updateOrderLatLng) {
-                        await OrderDB.updateOrderLatLng(order.order_id, coords.lat, coords.lng);
-                    }
-                } catch (err) {
-                    console.warn("Could not update order coords:", err);
-                }
-            }
-        } catch (err) {
-            console.warn("Error attaching coords to order:", err);
-        }
-
-        // 6) insert order items
-        await addOrderItems(order.order_id, cartItems);
-
-        // 7) reimbursements to sellers
-        await createReimbursements(cartItems, order.order_id);
-
-        // 8) decrement stock
-        await decrementStock(cartItems);
-
-        // 9) clear cart in DB + local
-        await clearUserCart(user.id);
-        clearCart();
-
-        // 10) navigate to success
-        navigate("/order-success", { state: { orderId: order.order_id } });
+    const user = await getUserDetails();
+    if (!user) {
+        alert("You must be logged in.");
         setLoading(false);
-    };
+        return;
+    }
+
+    if (!cartItems || cartItems.length === 0) {
+        alert("Your cart is empty.");
+        setLoading(false);
+        return;
+    }
+
+    //
+    // ONLINE PAYMENT BRANCH 
+    //
+    if (paymentMethod === 'online') {
+        try {
+            // 1) ask backend to create Stripe checkout session
+            const res = await fetch("http://localhost:5000/create-checkout-session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    amount: totalPrice * 100
+                })
+            });
+
+            const data = await res.json();
+
+            // 2) redirect user to the payment gateway
+            window.location.href = data.url;
+            return;   // stop COD flow here
+        } catch (err) {
+            console.error(err);
+            alert("Could not start online payment");
+            setLoading(false);
+            return;
+        }
+    }
+
+    //
+    //CASH ON DELIVERY BRANCH
+    const coords = await getLatLongFromAddress(address1, address2, city, pincode, country);
+
+    if (saveThisAddress && !selectedSavedAddressId) {
+        try {
+            await saveAddressForUser(user.id, { address1, address2, city, pincode, country }, coords);
+
+            const list = await getSavedAddresses(user.id);
+            setSavedAddresses(list || []);
+        } catch (err) {
+            console.warn('Failed to save address', err);
+        }
+    }
+
+    const payment = await createPayment(totalPrice);
+    if (!payment) {
+        alert("Payment creation failed.");
+        setLoading(false);
+        return;
+    }
+
+    const order = await createOrder(user.id, payment.payment_id, {
+        address1,
+        address2,
+        city,
+        pincode,
+        country
+    });
+    if (!order) {
+        alert("Order creation failed.");
+        setLoading(false);
+        return;
+    }
+
+    try {
+        if (coords) {
+            const OrderDB = await import('../utils/OrderDB');
+            if (OrderDB.updateOrderLatLng) {
+                await OrderDB.updateOrderLatLng(order.order_id, coords.lat, coords.lng);
+            }
+        }
+    } catch (err) {
+        console.warn("Could not attach coords:", err);
+    }
+
+    await addOrderItems(order.order_id, cartItems);
+    await createReimbursements(cartItems, order.order_id);
+    await decrementStock(cartItems);
+
+    await clearUserCart(user.id);
+    clearCart();
+
+    navigate("/order-success", { state: { orderId: order.order_id } });
+    setLoading(false);
+};
+
 
     if (!cartItems || cartItems.length === 0) {
         return (
@@ -264,13 +274,13 @@ function CheckoutPage() {
                     {/* Save this address */}
                     <div className="form-group">
                         <label>
+                            Save this address for future orders
                             <input
                                 type="checkbox"
                                 checked={saveThisAddress}
                                 onChange={(e) => setSaveThisAddress(e.target.checked)}
                                 disabled={!!selectedSavedAddressId} // no saving if user selected an existing address
-                            />{' '}
-                            Save this address for future orders
+                            />{' '}  
                         </label>
                         {selectedSavedAddressId && <p style={{ fontSize: 12, color: '#666' }}>Using saved address - saving disabled.</p>}
                     </div>
@@ -287,11 +297,12 @@ function CheckoutPage() {
                             Cash on Delivery
                         </label>
 
-                        <label className="payment-option disabled">
+                        <label className="payment-option">
                             <input
                                 type="radio"
                                 value="online"
-                                disabled
+                                checked={paymentMethod === 'online'}
+                                onChange={() => setPaymentMethod('online')}
                             />
                             Online Payment (Coming Soon)
                         </label>
