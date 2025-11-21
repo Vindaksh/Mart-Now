@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { getAllProducts, getAllRetailers } from "../utils/Database";
 import ProductCard from "../components/ProductCard";
-import "./Dashboard.css";
+import { Search } from "lucide-react";
+//import "./Dashboard.css";
 import PriceSlider from "../components/priceslider";
 
 
@@ -11,6 +12,7 @@ function DashboardPage() {
     const [retailers, setRetailers] = useState([]);
 
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
 
     // -------- FILTER STATES --------
     const [minPrice, setMinPrice] = useState(0);
@@ -84,7 +86,7 @@ function DashboardPage() {
 
     // -------- APPLY FILTER FUNCTION --------
     const applyFilters = () => {
-    const minP = Number(minPrice);
+        const minP = Number(minPrice);
     const maxP = Number(maxPrice);
     const distanceLimit = maxDistance ? Number(maxDistance) : null;
 
@@ -144,76 +146,59 @@ function DashboardPage() {
     }
 
     return (
-        <div className="dashboard-wrapper">
-            
-            {/* ---------------------- FILTER SIDEBAR ---------------------- */}
-            <aside className="filter-panel">
-                <h2>Filters</h2>
-
-                {/* PRICE FILTER */}
-                    <h3>Price Range</h3>
-                    {minPrice !== "" && maxPrice !== "" && (
-                        <PriceSlider
-                            min={priceBounds.min}
-                            max={priceBounds.max}
-                            value={[minPrice, maxPrice]}
-                            onChange={(vals) => {
-                                setMinPrice(vals[0]);
-                                setMaxPrice(vals[1]);
-                            }}
+        <div className="min-h-[calc(100vh-80px)] bg-rose-50 py-8 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+    
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-slate-900">Marketplace</h1>
+                        <p className="text-slate-500 mt-1">Items available in your area.</p>
+                    </div>
+    
+                    {/* Search Bar */}
+                    <div className="relative max-w-md w-full">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-5 w-5 text-rose-400" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search for apples, bread..."
+                            className="block w-full pl-10 pr-3 py-3 border border-rose-100 rounded-2xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 sm:text-sm shadow-sm transition-all"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                    )}
-                {/* RETAILER FILTER */}
-                <div className="filter-block">
-                    <h3>Retailers</h3>
-                    {retailers.map((r) => (
-                        <label key={r.seller_id} className="checkbox">
-                            <input
-                                type="checkbox"
-                                checked={selectedRetailers.includes(r.seller_id)}
-                                onChange={() => toggleRetailer(r.seller_id)}
-                            />
-                            {r.name}
-                        </label>
-                    ))}
+                    </div>
                 </div>
-
-                {/* DISTANCE FILTER */}
-                <div className="filter-block">
-                    <h3>Distance (km)</h3>
-                    <input
-                        type="number"
-                        placeholder="Max distance"
-                        value={maxDistance}
-                        onChange={(e) => setMaxDistance(e.target.value)}
-                    />
-                </div>
-
-                {/* SORTING */}
-                <div className="filter-block">
-                    <h3>Sort By</h3>
-                    <select value={sortType} onChange={(e) => setSortType(e.target.value)}>
-                        <option value="">None</option>
-                        <option value="price_asc">Price: Low → High</option>
-                        <option value="price_desc">Price: High → Low</option>
-                        <option value="distance">Distance: Near → Far</option>
-                    </select>
-                </div>
-
-                <button className="apply-btn" onClick={applyFilters}>
-                    Apply Filters
-                </button>
-            </aside>
-
-            {/* ---------------------- PRODUCT GRID ---------------------- */}
-            <div className="dashboard-container">
-                <h1 className="dashboard-title">Our Products</h1>
-
-                <div className="product-list">
-                    {filtered.map((product) => (
-                        <ProductCard key={product.id} product={product} />
-                    ))}
-                </div>
+    
+                {/* Content Area */}
+                {loading ? (
+                    <div className="flex justify-center items-center h-64 text-rose-400 font-medium animate-pulse">
+                        Loading fresh products...
+                    </div>
+                ) : (
+                    <>
+                        {filteredProducts.length === 0 ? (
+                            <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-rose-100">
+                                <p className="text-slate-500 text-lg">No products found matching "{searchTerm}".</p>
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="mt-4 text-rose-600 font-bold hover:underline"
+                                >
+                                    Clear Search
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {filteredProducts.map((product) => (
+                                    <div key={product.id || product.product_id} className="h-full">
+                                        <ProductCard product={product} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
         </div>
     );
