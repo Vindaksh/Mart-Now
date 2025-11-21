@@ -120,7 +120,6 @@ export const getProductById = async (productId: string) => {
             description,
             image_url,
             listings: product_listings (
-                seller_id,
                 price,
                 stock
             )
@@ -148,8 +147,7 @@ export default Supabase;
 export async function getAllRetailers() {
     const { data, error } = await Supabase
         .from("sellers")     // <-- replace with correct table name if different
-        .select("seller_id, name, user_role")
-        .eq("user_role", "retailer");
+        .select("seller_id, name, user_role");
 
     if (error) {
         console.error("Error fetching retailers:", error);
