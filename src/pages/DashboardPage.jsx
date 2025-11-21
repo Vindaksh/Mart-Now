@@ -1,207 +1,221 @@
 import React, { useState, useEffect } from "react";
 import { getAllProducts, getAllRetailers } from "../utils/Database";
 import ProductCard from "../components/ProductCard";
-import { Search } from "lucide-react";
-//import "./Dashboard.css";
 import PriceSlider from "../components/priceslider";
+import { Search } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
+export default function DashboardPage() {
+    const { user } = useAuth();
 
-function DashboardPage() {
     const [products, setProducts] = useState([]);
     const [filtered, setFiltered] = useState([]);
     const [retailers, setRetailers] = useState([]);
-
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
 
-    // -------- FILTER STATES --------
+    // Filters
+    const [searchTerm, setSearchTerm] = useState("");
     const [minPrice, setMinPrice] = useState(0);
     const [maxPrice, setMaxPrice] = useState(0);
-
     const [selectedRetailers, setSelectedRetailers] = useState([]);
     const [maxDistance, setMaxDistance] = useState("");
     const [sortType, setSortType] = useState("");
     const [priceBounds, setPriceBounds] = useState({ min: 0, max: 5000 });
 
-
-    function extractPrice(product) {
-        if (!product.listings || product.listings.length === 0) return 0;
-        return Math.min(...product.listings.map(l => l.price || 0));
-    }
-    function productMinListingDistance(product) {
-        const dist = (product.listings || []).map(l => Number(l.distance_from_user ?? Infinity)).filter(d => !Number.isNaN(d));
-        if (dist.length === 0) return Infinity;
-        return Math.min(...dist);
+    // Helpers
+    function lowestListingPrice(product) {
+        return Math.min(...product.listings.map(l => l.price));
     }
 
     useEffect(() => {
-        const fetchData = async () => {
+        const loadData = async () => {
             const productData = await getAllProducts();
-            const retailerData = await getAllRetailers(); // Helper needed
+            const sellerData = await getAllRetailers(); // Sellers table already filtered by role
 
-            const retailerIds = new Set(retailerData.map(r => r.user_id));
+            if (!user) return;
 
-            // For each product, keep only listings that belong to retailers
-            const productsWithRetailListings = (productData || []).map(p => {
-                const listings = (p.listings || []).filter(l => retailerIds.has(l.seller_id));
-                return {
+            // Determine which sellers to show listings from
+            const allowedRole = user.role === "customer" ? "retailer" : "wholesaler";
+            const allowedSellerIds = sellerData
+                .filter(s => s.user_role === allowedRole)
+                .map(s => s.seller_id);
+
+            // Filter listing table
+            const cleaned = productData
+                .map(p => {
+                    const allowedListings = (p.listings || []).filter(l =>
+                        allowedSellerIds.includes(l.seller_id)
+                    );
+                    return { ...p, listings: allowedListings };
+                })
+                .filter(p => p.listings.length > 0)
+                .map(p => ({
                     ...p,
-                    listings
-                };
-            })
-            // drop products that have zero retailer listings
-            .filter(p => (p.listings || []).length > 0);
+                    lowest_price: lowestListingPrice(p)
+                }));
 
-            const allListingPrices = [];
-            for (const p of productsWithRetailListings) {
-                for (const l of p.listings) {
-                    const price = Number(l.price ?? 0);
-                    if (!Number.isNaN(price)) allListingPrices.push(price);
-                }
-            }
+            // Compute price bounds
+            const allPrices = cleaned.flatMap(p => p.listings.map(l => l.price));
+            const minP = Math.min(...allPrices);
+            const maxP = Math.max(...allPrices);
 
-            const minP = allListingPrices.length ? Math.min(...allListingPrices) : 0;
-            const maxP = allListingPrices.length ? Math.max(...allListingPrices) : 0;
-
-            setProducts(productData);
-            setFiltered(productData);
-            setRetailers(retailerData);
-
+            setProducts(cleaned);
+            setFiltered(cleaned);
             setPriceBounds({ min: minP, max: maxP });
             setMinPrice(minP);
             setMaxPrice(maxP);
 
+            // Only retailers if customer
+            setRetailers(
+                sellerData.filter(s => s.user_role === allowedRole)
+            );
 
             setLoading(false);
         };
 
-        fetchData();
-    }, []);
+        loadData();
+    }, [user]);
 
-    // -------- HANDLE RETAILER CHECKBOX --------
     const toggleRetailer = (id) => {
-        setSelectedRetailers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+        setSelectedRetailers(prev =>
+            prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
+        );
     };
 
-
-    // -------- APPLY FILTER FUNCTION --------
+    //─ APPLY FILTERS ─────────────────────────────────────────────
     const applyFilters = () => {
+        let f = [...products];
         const minP = Number(minPrice);
-    const maxP = Number(maxPrice);
-    const distanceLimit = maxDistance ? Number(maxDistance) : null;
+        const maxP = Number(maxPrice);
+        const distanceLimit = maxDistance ? Number(maxDistance) : null;
 
-    // product passes if ANY of its retailer listings match all filters
-    const f = products.filter(product => {
-        const validListings = (product.listings || []).filter(listing => {
-            const price = Number(listing.price ?? 0);
-            const seller = listing.seller_id;
-
-            // ---- PRICE FILTER ----
-            if (price < minP || price > maxP) return false;
-
-            // ---- RETAILER FILTER ----
-            if (selectedRetailers.length > 0 && !selectedRetailers.includes(seller)) {
-                return false;
-            }
-
-            // ---- DISTANCE FILTER ----
-            if (distanceLimit !== null) {
-                const d = Number(listing.distance_from_user ?? Infinity);
-                if (d > distanceLimit) return false;
-            }
-
-            return true;
+        f = f.filter(product => {
+            const valid = product.listings.filter(l => {
+                if (l.price < minP || l.price > maxP) return false;
+                if (selectedRetailers.length > 0 && !selectedRetailers.includes(l.seller_id))
+                    return false;
+                if (distanceLimit !== null) {
+                    const d = Number(l.distance_from_user ?? Infinity);
+                    if (d > distanceLimit) return false;
+                }
+                return true;
+            });
+            return valid.length > 0;
         });
 
-        // include product only if at least one listing is valid
-        return validListings.length > 0;
-    });
+        if (sortType === "price_asc")
+            f.sort((a, b) => a.lowest_price - b.lowest_price);
 
-    // ---- SORTING ----
-    if (sortType === "price_asc") {
-        f.sort((a, b) => extractPrice(a) - extractPrice(b));
-    } 
-    else if (sortType === "price_desc") {
-        f.sort((a, b) => extractPrice(b) - extractPrice(a));
-    } 
-    else if (sortType === "distance") {
-        // sort by min listing distance
-        const dist = p =>
-            Math.min(
-                ...(p.listings || []).map(l => Number(l.distance_from_user ?? Infinity))
-            );
-        f.sort((a, b) => dist(a) - dist(b));
-    }
+        if (sortType === "price_desc")
+            f.sort((a, b) => b.lowest_price - a.lowest_price);
 
-    setFiltered(f);
-};
+        setFiltered(f);
+    };
 
-
-    if (loading) {
-        return (
-            <div className="dashboard-container">
-                <h1 className="dashboard-title">Loading Products...</h1>
-            </div>
-        );
-    }
+    if (loading) return <div className="p-10 text-center text-xl">Loading...</div>;
 
     return (
-        <div className="min-h-[calc(100vh-80px)] bg-rose-50 py-8 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl mx-auto">
-    
-                {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
-                    <div>
-                        <h1 className="text-3xl font-extrabold text-slate-900">Marketplace</h1>
-                        <p className="text-slate-500 mt-1">Items available in your area.</p>
-                    </div>
-    
-                    {/* Search Bar */}
-                    <div className="relative max-w-md w-full">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-rose-400" />
-                        </div>
+        <div className="min-h-screen bg-rose-50 flex">
+
+            {/* ───────────────── LEFT SIDEBAR ───────────────── */}
+            <aside className="w-72 bg-white shadow-lg p-5 sticky top-0 h-screen overflow-y-auto">
+
+                <h2 className="text-xl font-bold mb-5">Filters</h2>
+
+                {/* SEARCH */}
+                <div className="mb-6">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-3 text-gray-400" size={18} />
                         <input
-                            type="text"
-                            placeholder="Search for apples, bread..."
-                            className="block w-full pl-10 pr-3 py-3 border border-rose-100 rounded-2xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 sm:text-sm shadow-sm transition-all"
+                            className="w-full pl-10 pr-3 py-2 rounded-xl border"
+                            placeholder="Search products..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                 </div>
-    
-                {/* Content Area */}
-                {loading ? (
-                    <div className="flex justify-center items-center h-64 text-rose-400 font-medium animate-pulse">
-                        Loading fresh products...
-                    </div>
+
+                {/* PRICE */}
+                <div className="mb-6">
+                    <h3 className="font-semibold mb-2">Price Range</h3>
+                    <PriceSlider
+                        min={priceBounds.min}
+                        max={priceBounds.max}
+                        value={[minPrice, maxPrice]}
+                        onChange={(vals) => {
+                            setMinPrice(vals[0]);
+                            setMaxPrice(vals[1]);
+                        }}
+                    />
+                </div>
+
+                {/* RETAILERS */}
+                <div className="mb-6">
+                    <h3 className="font-semibold mb-2">Retailers</h3>
+                    {retailers.map(r => (
+                        <label key={r.seller_id} className="flex items-center space-x-2 py-1">
+                            <input
+                                type="checkbox"
+                                checked={selectedRetailers.includes(r.seller_id)}
+                                onChange={() => toggleRetailer(r.seller_id)}
+                            />
+                            <span>{r.name}</span>
+                        </label>
+                    ))}
+                </div>
+
+                {/* DISTANCE */}
+                <div className="mb-6">
+                    <h3 className="font-semibold mb-2">Distance (km)</h3>
+                    <input
+                        type="number"
+                        className="w-full border rounded-xl px-3 py-2"
+                        placeholder="max distance"
+                        value={maxDistance}
+                        onChange={(e) => setMaxDistance(e.target.value)}
+                    />
+                </div>
+
+                {/* SORTING */}
+                <div className="mb-6">
+                    <h3 className="font-semibold mb-2">Sort By</h3>
+                    <select
+                        className="w-full border rounded-xl px-3 py-2"
+                        value={sortType}
+                        onChange={e => setSortType(e.target.value)}
+                    >
+                        <option value="">None</option>
+                        <option value="price_asc">Price: Low → High</option>
+                        <option value="price_desc">Price: High → Low</option>
+                    </select>
+                </div>
+
+                <button
+                    className="w-full py-3 bg-rose-500 text-white rounded-xl font-semibold"
+                    onClick={applyFilters}
+                >
+                    Apply Filters
+                </button>
+            </aside>
+
+            {/* ───────────────── PRODUCT GRID ───────────────── */}
+            <main className="flex-1 p-8">
+                <h1 className="text-3xl font-extrabold mb-6">Marketplace</h1>
+
+                {filtered.length === 0 ? (
+                    <p className="text-gray-500">No products found.</p>
                 ) : (
-                    <>
-                        {filteredProducts.length === 0 ? (
-                            <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-rose-100">
-                                <p className="text-slate-500 text-lg">No products found matching "{searchTerm}".</p>
-                                <button
-                                    onClick={() => setSearchTerm('')}
-                                    className="mt-4 text-rose-600 font-bold hover:underline"
-                                >
-                                    Clear Search
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {filteredProducts.map((product) => (
-                                    <div key={product.id || product.product_id} className="h-full">
-                                        <ProductCard product={product} />
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {filtered
+                            .filter(p =>
+                                p.name.toLowerCase().includes(searchTerm.toLowerCase())
+                            )
+                            .map(product => (
+                                <ProductCard key={product.id} product={product} />
+                            ))}
+                    </div>
                 )}
-            </div>
+            </main>
         </div>
     );
 }
-
-export default DashboardPage;
