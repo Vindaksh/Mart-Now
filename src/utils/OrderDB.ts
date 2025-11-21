@@ -34,3 +34,19 @@ export const completePayment = async (total: number):Promise<OnlinePaymentInterf
     };
     return payment;
 }
+export async function updateOrderLatLng(orderId: number | string, lat: number, lng: number) {
+    const id = Number(orderId); // ensure numeric
+
+    const { data, error } = await Supabase
+        .from("orders")
+        .update({ lat, lng })
+        .eq("order_id", id)
+        .select();
+
+    if (error) {
+        console.error("Error attaching coordinates:", error);
+        return false;
+    }
+
+    return true;
+}

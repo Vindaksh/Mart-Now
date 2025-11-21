@@ -38,3 +38,30 @@ export async function getSavedAddresses(userId) {
 
     return data;
 }
+export async function updateSavedAddress(addressId, updates) {
+    const { data, error } = await Supabase
+        .from("saved_addresses")
+        .update(updates)
+        .eq("address_id", addressId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error updating address:", error);
+        return null;
+    }
+
+    return data;
+}
+export async function deleteSavedAddress(addressId) {
+    const { error } = await Supabase
+        .from("saved_addresses")
+        .delete()
+        .eq("address_id", addressId);
+
+    if (error) {
+        console.error("Error deleting address:", error);
+        return false;
+    }
+    return true;
+}

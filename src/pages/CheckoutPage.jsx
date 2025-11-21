@@ -132,24 +132,12 @@ function CheckoutPage() {
             return;
         }
 
-        // // 5) attach lat/lng to order (OrderDB should expose updateOrderLatLng; if not, add it)
-        // try {
-        //     if (coords) {
-        //         // call a helper in OrderDB (updateOrderLatLng) which you should add if missing
-        //         // it's safe to call even if you don't store lat/lng in orders (it will fail quietly)
-        //         try {
-        //             // dynamic import so it doesn't crash if function doesn't exist
-        //             const OrderDB = await import('../utils/OrderDB');
-        //             if (OrderDB.updateOrderLatLng) {
-        //                 await OrderDB.updateOrderLatLng(order.order_id, coords.lat, coords.lng);
-        //             }
-        //         } catch (err) {
-        //             console.warn("Could not update order coords:", err);
-        //         }
-        //     }
-        // } catch (err) {
-        //     console.warn("Error attaching coords to order:", err);
-        // }
+        if (coords) {
+            await updateOrderLatLng(order.order_id, coords.lat, coords.lng);
+        } else {
+            console.warn("No coordinates found, skipping lat/lng update");
+        }
+
 
         // navigate to success
         await refreshCart(user);

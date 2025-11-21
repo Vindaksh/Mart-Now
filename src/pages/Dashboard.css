@@ -1,20 +1,100 @@
+/* --- Layout wrapper: sidebar + product grid --- */
+.dashboard-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  align-items: flex-start;
+  padding: 2rem;
+}
+
+/* --- Left filter panel --- */
+.filter-panel {
+  position: sticky;
+  top: 100px;
+  width: 260px;
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  height: auto;
+  flex-shrink: 0;
+  color: #222; /* fix white text issue */
+}
+
+/* Labels */
+.filter-panel h2,
+.filter-panel h3,
+.filter-panel label,
+.filter-panel p {
+  color: #222;
+}
+
+.filter-block {
+  margin-bottom: 1.5rem;
+}
+
+/* Inputs */
+.filter-panel input,
+.filter-panel select {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  color: #222;
+  background: #fff;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.3rem 0;
+}
+
+/* Apply Button */
+.apply-btn {
+  width: 100%;
+  padding: 0.7rem;
+  background: #007bff;
+  color: white !important;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* --- Product grid container --- */
 .dashboard-container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 0 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* center the grid */
 }
 
 .dashboard-title {
-    text-align: center;
-    font-size: 2.5rem;
-    color: #333;
-    margin-bottom: 2rem;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #111;
 }
 
+/* --- Product Grid --- */
 .product-list {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 1rem;
-    /* this adds space between cards */
+  width: 100%;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columns */
+  gap: 1.5rem;
+}
+
+/* --- Fix text color inside product cards --- */
+.product-card,
+.product-card * {
+  color: #111 !important;
+}
+
+/* Make sure unavailable cards also readable */
+.unavailable,
+.unavailable * {
+  color: #333 !important;
 }

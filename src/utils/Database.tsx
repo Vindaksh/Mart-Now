@@ -117,3 +117,15 @@ export const getProductById = async (productId: string) => {
 };
 
 export default Supabase;
+export async function getAllRetailers() {
+    const { data, error } = await Supabase
+        .from("sellers")     // <-- replace with correct table name if different
+        .select("seller_id, name");
+
+    if (error) {
+        console.error("Error fetching retailers:", error);
+        return [];
+    }
+
+    return data;
+}
