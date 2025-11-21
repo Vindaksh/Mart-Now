@@ -39,6 +39,11 @@ export type CartItemInterface = {
     listing: ListingInterface
 }
 
+export type OrderInterface = {
+    order_id: number;
+    order_items: OrderItemInterface[]
+}
+
 export type OrderItemInterface = {
     order_id: number;
     listing_id: string;
@@ -62,8 +67,8 @@ export type AddressInterface = {
     city: string;
     pincode: string;
     country: string;
-    lat: number;
-    long: number;
+    lat: number|null;
+    lng: number|null;
     address_id: string|null;
 }
 

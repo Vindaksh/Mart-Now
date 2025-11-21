@@ -42,6 +42,33 @@ export const getUserDetails = async (): Promise<UserInterface | null> => {
     }
 };
 
+export const updateName = async (user: UserInterface, newName: string) => {
+    if (!newName.trim()) return alert("Enter a name");
+
+    const { error } = await Supabase
+        .from("users")
+        .update({ name: newName })
+        .eq("user_id", user!.id);
+
+    if (error) return alert("Error updating name");
+};
+
+export const updatePassword = async (user: UserInterface, newPassword: string) => {
+    if (!newPassword.trim()) return alert("Enter a new password");
+
+    const { error } = await Supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+        console.error("Error updating password", error);
+        return;
+    }
+    else {
+        console.log("Password updated");
+    }
+  };
+
 export const getProductById = async (productId: string) => {
     const { data, error } = await Supabase
         .from("products")

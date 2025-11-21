@@ -18,6 +18,7 @@ interface AuthContextInterface {
     setSession: (session: Session | null | undefined) => void;
     setLoading: () => void;
     stopLoading: () => void;
+    reload: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextInterface>({
@@ -28,7 +29,8 @@ export const AuthContext = createContext<AuthContextInterface>({
     setUser: (user) => { },
     setSession: (session) => { },
     setLoading: () => { },
-    stopLoading: () => { }
+    stopLoading: () => { },
+    reload: async () => { }
 });
 
 export const useAuth = () => {
@@ -40,24 +42,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [user, setUser] = useState<UserInterface | null>(null);
     const [session, setSession] = useState<Session | null | undefined>(undefined);
     const [loading, setLoading] = useState<boolean>(true);
-    const [prevSessionId, setPrevSessionId] = useState<string | null>(null);
 
     const logout = async () => {
         setLoading(true);
         const { error } = await Supabase.auth.signOut();
         if (error) {
-            setLoading(false);
             console.error("Logout failed:", error);
             alert("Logout failed. Please try again");
         }
-        setLoading(false);
         setUser(null);
         setSession(null);
+        setLoading(false);
     }
 
+    
     const getUserData = async (session: Session): Promise<UserInterface | null> => {
         const { data, error } = await Supabase.rpc("get_user_data", { uid: session.user.id }) as { data: UserDataInterface | null, error: any };
-
+        
         if (data) {
             var loc: { latitude: number, longitude: number } | null;
             if (data.latitude) {
@@ -84,36 +85,51 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return null;
         }
     }
-
+    
     useEffect(() => {
         const { data: authListener } = Supabase.auth.onAuthStateChange(
-            async (event, session) => {
-                console.log("session changed", event);
-                setSession(session);
+            async (event, newSession) => {
+                console.log("session changed", event, newSession);
+                setSession(newSession);
             }
         );
-
+        
         return () => {
             authListener.subscription.unsubscribe();
         };
     }, []);
-
+    
     useEffect(() => {
         const loadUserData = async () => {
-            if (session === undefined || !session) return;
-            if (session.user.id === prevSessionId) return;
-
+            if (session === undefined) return;
+            if (!session) {
+                setUser(null);
+                setLoading(false);
+                return;
+            }
+            if (user && session.user.id === user.id) {
+                setLoading(false);
+                return;
+            }
+            
             const userData = await getUserData(session);
+            console.log(userData);
             setUser(userData);
-            setPrevSessionId(session.user.id);
+            setLoading(false);
         }
-        console.log(`${prevSessionId} -> ${session}`);
         loadUserData();
+    }, [session]);
+    
+    const reload = async () => {
+        if (session === undefined || !session) return;
+        setLoading(true);
+        const userData = await getUserData(session);
+        setUser(userData);
         setLoading(false);
-    }, [session, prevSessionId]);
+    }
 
     return (
-        <AuthContext.Provider value={{ user, session, loading, logout, setUser, setSession, setLoading: () => { setLoading(true); }, stopLoading: () => { setLoading(false); }}}>
+        <AuthContext.Provider value={{ user, session, loading, logout, setUser, setSession, setLoading: () => { setLoading(true); }, stopLoading: () => { setLoading(false); }, reload}}>
             {children}
         </AuthContext.Provider>
     );

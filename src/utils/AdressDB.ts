@@ -1,15 +1,25 @@
 import Supabase from "./Database";
+import { AddressInterface, UserInterface } from "./Interfaces";
 
-export async function saveAddressForUser(userId, address, coords = null) {
+type AddressInputInterface = {
+    address1: string,
+    address2: string|null,
+    city: string,
+    pincode: string,
+    country: string,
+    lat: number | null,
+    lng: number | null
+}
+export async function saveAddressForUser(user: UserInterface, address: AddressInputInterface) {
     const payload = {
-        user_id: userId,
+        user_id: user.id,
         address1: address.address1,
-        address2: address.address2 || null,
+        address2: address.address2,
         city: address.city,
         pincode: address.pincode,
         country: address.country,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null
+        lat: address.lat,
+        lng: address.lng
     };
 
     const { data, error } = await Supabase
@@ -25,11 +35,11 @@ export async function saveAddressForUser(userId, address, coords = null) {
     return data;
 }
 
-export async function getSavedAddresses(userId) {
+export async function getSavedAddresses(user: UserInterface) {
     const { data, error } = await Supabase
         .from("saved_addresses")
         .select("*")
-        .eq("user_id", userId);
+        .eq("user_id", user.id);
 
     if (error) {
         console.error("Error fetching addresses:", error);
@@ -38,7 +48,17 @@ export async function getSavedAddresses(userId) {
 
     return data;
 }
-export async function updateSavedAddress(addressId, updates) {
+
+type AddressUpdateInterface = {
+    address1: string | undefined,
+    address2: string | undefined,
+    city: string | undefined,
+    pincode: string | undefined,
+    country: string | undefined,
+    lat: number | undefined,
+    lng: number | undefined
+}
+export async function updateSavedAddress(addressId: string, updates: AddressUpdateInterface) {
     const { data, error } = await Supabase
         .from("saved_addresses")
         .update(updates)
@@ -53,7 +73,7 @@ export async function updateSavedAddress(addressId, updates) {
 
     return data;
 }
-export async function deleteSavedAddress(addressId) {
+export async function deleteSavedAddress(addressId: string) {
     const { error } = await Supabase
         .from("saved_addresses")
         .delete()

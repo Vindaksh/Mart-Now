@@ -1,5 +1,6 @@
+import { PostgrestResponse } from "@supabase/supabase-js";
 import Supabase from "./Database";
-import { AddressInterface, UserInterface, OnlinePaymentInterface } from "./Interfaces";
+import { AddressInterface, UserInterface, OnlinePaymentInterface, OrderInterface } from "./Interfaces";
 
 /* -----------------------------
    1. Create Order (returns new order_id)
@@ -20,6 +21,31 @@ export async function createOrder(buyer: UserInterface, payment: OnlinePaymentIn
     console.log(data);
 
     return data;
+}
+
+export const getOrders = async (user: UserInterface, limit: number = 10) => {
+    const { data, error } = await Supabase
+    .from('orders')
+    .select(`
+        order_id,
+        order_items (
+        order_id,
+        listing_id,
+        name,
+        price,
+        quantity,
+        order_status
+        )
+    `)
+    .eq("buyer_id", user.id)
+    .limit(limit);
+
+    if (error) {
+        console.error("Error fetching orders:", error);
+        return [];
+    }
+
+    return data as OrderInterface[] ?? [];
 }
 
 

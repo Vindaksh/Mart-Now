@@ -70,15 +70,11 @@ function NavBar() {
             <div className="navbar-links">
                 {renderNavLinks()}
 
-                {user&&!loading ? (
-                    <button onClick={handleLogout} className="nav-logout-btn">
-                        Logout
-                    </button>
-                ) : (
+                {!user&&
                     <Link to="/login" className="nav-login-btn">
                         Sign In
                     </Link>
-                )}
+                }
             </div>
         </nav>
     );
