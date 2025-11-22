@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAllProducts, getAllWholesalers } from '../utils/Database';
 import ProductCard from '../components/ProductCard';
 import { Search, Filter } from 'lucide-react';
+import { FilteredProductInterface } from "../utils/Interfaces";
 
 function WholesaleMarket() {
     const [products, setProducts] = useState<FilteredProductInterface[]>([]);
@@ -11,7 +12,6 @@ function WholesaleMarket() {
     useEffect(() => {
         const loadMarket = async () => {
             try {
-                // 1. Fetch all products and all wholesalers in parallel
                 const [allProducts, allWholesalers] = await Promise.all([
                     getAllProducts(),
                     getAllWholesalers()
@@ -19,31 +19,28 @@ function WholesaleMarket() {
 
                 if (!allProducts || !allWholesalers) return;
 
-                // 2. Create a list of valid Wholesaler IDs
-                const wholesalerIds = allWholesalers.map(w => w.seller_id);
+                const wholesalerIds = (allWholesalers as any[]).map(w => w.seller_id);
 
-                // 3. Filter the products
-                const wholesaleOnlyProducts = allProducts.map(product => {
-                    // Only keep listings that belong to a Wholesaler
-                    const wholesaleListings = (product.listings || []).filter(l =>
+                const wholesaleOnlyProducts = (allProducts as any[]).map(product => {
+                    const wholesaleListings = (product.listings || []).filter((l: any) =>
                         wholesalerIds.includes(l.seller_id)
                     );
 
-                    // Recalculate lowest price based ONLY on wholesale listings
                     const lowestPrice = wholesaleListings.length > 0
-                        ? Math.min(...wholesaleListings.map(l => l.price))
+                        ? Math.min(...wholesaleListings.map((l: any) => l.price))
                         : null;
 
                     return {
                         ...product,
-                        listings: wholesaleListings, // Replace mixed listings with only wholesale ones
-                        lowest_price: lowestPrice
+                        listings: wholesaleListings,
+                        lowest_price: lowestPrice,
+                        imageURL: product.image_url,
+                        categoryIDs: []
                     };
                 })
-                    // 4. Remove products that have NO wholesale listings available
                     .filter(p => p.listings.length > 0);
 
-                setProducts(wholesaleOnlyProducts);
+                setProducts(wholesaleOnlyProducts as FilteredProductInterface[]);
 
             } catch (error) {
                 console.error("Failed to load wholesale market:", error);
@@ -55,7 +52,6 @@ function WholesaleMarket() {
         loadMarket();
     }, []);
 
-    // Live Search Logic
     const filteredProducts = products.filter(product =>
         product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -107,8 +103,9 @@ function WholesaleMarket() {
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {filteredProducts.map((product) => (
+                                // FIXED: key uses unique ID, prop passed inside component
                                 <div key={product.id || product.id} className="h-full">
-                                    <ProductCard product={product} displayDist={false} />
+                                    <ProductCard product={product} displayDist={true} />
                                 </div>
                             ))}
                         </div>

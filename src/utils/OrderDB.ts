@@ -1,4 +1,3 @@
-import { PostgrestResponse } from "@supabase/supabase-js";
 import Supabase from "./Database";
 import { AddressInterface, UserInterface, OnlinePaymentInterface, OrderInterface } from "./Interfaces";
 
@@ -20,11 +19,12 @@ export async function createOrder(buyer: UserInterface, payment: OnlinePaymentIn
         console.error("Error creating order:", error);
         return null;
     }
-    console.log(data);
-
     return data;
 }
 
+/* -----------------------------
+   2. Get Orders (Customer History)
+--------------------------------*/
 export const getOrders = async (user: UserInterface, limit: number = 10) => {
     const { data, error } = await Supabase
         .from('orders')
@@ -32,15 +32,16 @@ export const getOrders = async (user: UserInterface, limit: number = 10) => {
         order_id,
         ordered_at,
         order_items (
-        order_id,
-        listing_id,
-        name,
-        price,
-        quantity,
-        order_status
+            order_id,
+            listing_id,
+            name,
+            price,
+            quantity,
+            order_status
         )
     `)
         .eq("buyer_id", user.id)
+        .order('ordered_at', { ascending: false })
         .limit(limit);
 
     if (error) {
@@ -50,7 +51,6 @@ export const getOrders = async (user: UserInterface, limit: number = 10) => {
 
     return data as OrderInterface[] ?? [];
 }
-
 
 /* -----------------------------
    3. Make Payment
@@ -63,8 +63,9 @@ export const completePayment = async (total: number): Promise<OnlinePaymentInter
     };
     return payment;
 }
+
 export async function updateOrderLatLng(orderId: number | string, lat: number, lng: number) {
-    const id = Number(orderId); // ensure numeric
+    const id = Number(orderId);
 
     const { data, error } = await Supabase
         .from("orders")
@@ -73,37 +74,49 @@ export async function updateOrderLatLng(orderId: number | string, lat: number, l
         .select();
 
     if (error) {
-        console.error("Error attaching coordinates:", error);
-        return false;
+        console.error("Error updating order coordinates:", error);
     }
-
-    return true;
+    return data;
 }
 
 /* -----------------------------
-   4. Get Orders for a Seller
+   4. Get Orders for a Seller (SPLIT QUERY METHOD)
 --------------------------------*/
 export async function getSellerOrders(sellerId: string) {
+    // Step 1: Get IDs of listings owned by this seller
+    const { data: myLi, error: liError } = await Supabase
+        .from('product_listings')
+        .select('product_listings_id')
+        .eq('seller_id', sellerId);
+
+    if (liError || !myLi) {
+        console.error("Error fetching seller listings:", liError);
+        return [];
+    }
+
+    const myListingIds = myLi.map(l => l.product_listings_id);
+
+    if (myListingIds.length === 0) {
+        return [];
+    }
+
+    // Step 2: Fetch Order Items using specific aliases and * to avoid column name errors
     const { data, error } = await Supabase
         .from('order_items')
         .select(`
             *,
-            order:orders (
+            order:orders!order_items_order_id_fkey (
                 order_id,
                 ordered_at,
-                address1,
-                city,
-                pincode,
-                buyer:buyer_id (
+                shipping_address:saved_addresses!orders_address_id_fkey (
+                    *
+                ),
+                buyer:users!orders_buyer_id_fkey (
                     name
                 )
-            ),
-            listing:product_listings!inner (
-                product_listings_id,
-                seller_id
             )
         `)
-        .eq('listing.seller_id', sellerId)
+        .in('listing_id', myListingIds)
         .order('order_item_id', { ascending: false });
 
     if (error) {

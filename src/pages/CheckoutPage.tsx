@@ -10,8 +10,14 @@ import { getSavedAddresses, saveAddressForUser } from "../utils/AdressDB";
 import { getLatLongFromAddress } from "../utils/Geo";
 import { MapPin, CreditCard, Truck, AlertCircle, ArrowLeft } from 'lucide-react';
 import { updateOrderLatLng } from '../utils/AdressDB';
+import { AddressInterface } from '../utils/Interfaces'; // Import needed type
 
-const InputField = ({ label, ...props }) => (
+// 1. FIX: Redefine InputField to correctly pass the event type and props
+interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
+    label: string;
+}
+
+const InputField: React.FC<InputFieldProps> = ({ label, ...props }) => (
     <div className="mb-4">
         <label className="block text-sm font-bold text-slate-700 mb-1.5">{label}</label>
         <input
@@ -20,7 +26,7 @@ const InputField = ({ label, ...props }) => (
         />
     </div>
 );
-import { AddressInterface } from '../utils/Interfaces';
+// Removed the duplicate InputField definition that caused confusion
 
 function CheckoutPage() {
     const { cartItems, totalPrice, refreshCart } = useCart();
@@ -139,18 +145,7 @@ function CheckoutPage() {
         );
     }
 
-    interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
-        label: string;
-    }
-    const InputField: React.FC<InputFieldProps> = ({ label, ...props }) => (
-        <div className="mb-4">
-            <label className="block text-sm font-bold text-slate-700 mb-1.5">{label}</label>
-            <input
-                className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all font-medium text-slate-800"
-                {...props}
-            />
-        </div>
-    );
+    // NOTE: The InputField component above is now the primary definition.
 
     return (
         <div className="min-h-screen bg-rose-50 py-8 px-4 sm:px-6 lg:px-8">

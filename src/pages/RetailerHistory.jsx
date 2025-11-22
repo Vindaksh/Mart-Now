@@ -1,3 +1,5 @@
+// pages/RetailerHistory.jsx
+
 import React, { useEffect, useState } from 'react';
 import { Package, CheckCircle, XCircle, MapPin, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -12,12 +14,9 @@ function RetailerHistory() {
         const loadHistory = async () => {
             if (!user) return;
             const data = await getSellerOrders(user.id);
-
-            // FILTER: Show ONLY Completed or Cancelled orders
             const historyItems = data.filter(order =>
                 order.order_status === 'completed' || order.order_status === 'cancelled'
             );
-
             setOrders(historyItems);
             setLoading(false);
         };
@@ -82,7 +81,9 @@ function RetailerHistory() {
                                                 <span className="font-bold text-slate-800">{item.order?.buyer?.name || "Unknown"}</span>
                                                 <div className="flex items-center gap-1 text-xs text-slate-500">
                                                     <MapPin size={12} />
-                                                    <span className="truncate max-w-[150px]">{item.order?.city}</span>
+                                                    <span className="truncate max-w-[150px]">
+                                                        {item.order?.shipping_address?.city || "City N/A"}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </td>

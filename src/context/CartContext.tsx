@@ -10,16 +10,18 @@ import Supabase from "../utils/Database";
 import { ListingInterface, CartItemInterface, UserInterface } from "../utils/Interfaces";
 import { useAuth } from "./AuthContext";
 
+// FIXED: Updated interface to match the implementation
 interface CartContextInterface {
     cartItems: CartItemInterface[];
     totalPrice: number;
-    addToCart: (listingId: string) => Promise<void>;
+    addToCart: (listing: ListingInterface) => Promise<void>; // Changed from string to ListingInterface
     removeFromCart: (item: CartItemInterface) => Promise<void>;
     updateQuantity: (item: CartItemInterface, newQty: number) => Promise<void>;
     clearCart: () => Promise<void>;
     refreshCart: (user: UserInterface) => Promise<void>;
 }
 
+// FIXED: Updated default context value to match interface
 const CartContext = createContext<CartContextInterface>({
     cartItems: [],
     totalPrice: 0,
@@ -46,7 +48,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const loadCart = async () => {
             if (!user) return;
 
-            const items = await getCartItems(user.id);
+            // FIXED: Passed 'user' instead of 'user.id' to match CartDB
+            const items = await getCartItems(user);
             setCartItems(items);
         };
 
@@ -88,14 +91,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         // 2. WHOLESALE CHECK: Enforce Minimum Quantity of 50
-        // If the seller is a wholesaler, we immediately bump the qty to 50
         if (listing.seller?.user_role === 'wholesaler') {
-            const newItem = addedItems[0]; // upsert returns an array
+            const newItem = addedItems[0];
 
             if (newItem && newItem.quantity < 50) {
-                // We need to pass the full object to updateCartQuantity, 
-                // but upsertCart might return a partial object. 
-                // We construct a temporary object sufficient for the update function.
+                // Construct a temporary object sufficient for the update function
                 const itemToUpdate = {
                     ...newItem,
                     listing: listing

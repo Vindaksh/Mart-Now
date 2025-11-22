@@ -1,7 +1,7 @@
 import Supabase from "./Database";
 
 // 1. Fetch all listings for the logged-in retailer
-export async function getRetailerListings(userId) {
+export async function getRetailerListings(userId: string) {
     const { data, error } = await Supabase
         .from('product_listings')
         .select(`
@@ -25,7 +25,7 @@ export async function getRetailerListings(userId) {
 }
 
 // 2. Search the Master Product Database
-export async function searchMasterProducts(query) {
+export async function searchMasterProducts(query: string) {
     const { data, error } = await Supabase
         .from('products')
         .select('*')
@@ -37,14 +37,15 @@ export async function searchMasterProducts(query) {
 }
 
 // 3. Create a Listing for an EXISTING Product
-export async function createListingForExisting(userId, productId, price, stock) {
+// Note: Inputs typed as string | number to be flexible with form inputs
+export async function createListingForExisting(userId: string, productId: string, price: string | number, stock: string | number) {
     const { data, error } = await Supabase
         .from('product_listings')
         .insert([{
             seller_id: userId,
             product_id: productId,
-            price: parseFloat(price),
-            stock: parseInt(stock)
+            price: Number(price),
+            stock: Number(stock)
         }])
         .select()
         .single();
@@ -52,8 +53,9 @@ export async function createListingForExisting(userId, productId, price, stock) 
     return { data, error };
 }
 
-// 4. Create a NEW Product AND a Listing (Transaction-like)
-export async function createNewProductAndListing(userId, productData, price, stock) {
+// 4. Create a NEW Product AND a Listing
+// 'productData' typed as 'any' or a specific interface to allow flexibility
+export async function createNewProductAndListing(userId: string, productData: any, price: string | number, stock: string | number) {
     // A. Insert Product
     const { data: product, error: prodError } = await Supabase
         .from('products')
@@ -73,8 +75,8 @@ export async function createNewProductAndListing(userId, productData, price, sto
         .insert([{
             seller_id: userId,
             product_id: product.product_id,
-            price: parseFloat(price),
-            stock: parseInt(stock)
+            price: Number(price),
+            stock: Number(stock)
         }])
         .select()
         .single();
@@ -82,8 +84,8 @@ export async function createNewProductAndListing(userId, productData, price, sto
     return { data: listing, error: listError };
 }
 
-// 5. Update an existing listing (Price/Stock only)
-export async function updateListing(listingId, updates) {
+// 5. Update an existing listing
+export async function updateListing(listingId: string, updates: any) {
     const { data, error } = await Supabase
         .from('product_listings')
         .update(updates)
@@ -94,32 +96,27 @@ export async function updateListing(listingId, updates) {
 }
 
 // 6. Delete a listing
-export async function deleteListing(listingId) {
+export async function deleteListing(listingId: string) {
     const { error, count } = await Supabase
         .from('product_listings')
-        .delete({ count: 'exact' }) // Request the count of deleted rows
+        .delete({ count: 'exact' })
         .eq('product_listings_id', listingId);
 
     return { error, count };
 }
 
-// 7. Adjust Stock (Decrement on buy, Increment on cancel)
-export async function adjustListingStock(listingId, adjustment) {
-    // 1. Get current stock
+// 7. Adjust Stock
+export async function adjustListingStock(listingId: string, adjustment: number) {
     const { data: current, error: fetchError } = await Supabase
         .from('product_listings')
         .select('stock')
         .eq('product_listings_id', listingId)
         .single();
 
-    if (fetchError) {
-        console.error("Stock fetch failed:", fetchError);
-        return { error: fetchError };
-    }
+    if (fetchError) return { error: fetchError };
 
     const newStock = current.stock + adjustment;
 
-    // 2. Update with new stock (prevent going below 0)
     const { data, error } = await Supabase
         .from('product_listings')
         .update({ stock: Math.max(0, newStock) })
@@ -130,14 +127,14 @@ export async function adjustListingStock(listingId, adjustment) {
 }
 
 // 8. Check if stock is sufficient
-export async function checkStockAvailability(listingId, requiredQty) {
+export async function checkStockAvailability(listingId: string, requiredQty: number) {
     const { data, error } = await Supabase
         .from('product_listings')
         .select('stock')
         .eq('product_listings_id', listingId)
         .single();
 
-    if (error) {
+    if (error || !data) {
         console.error("Stock check failed:", error);
         return false;
     }

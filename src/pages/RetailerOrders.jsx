@@ -1,3 +1,5 @@
+// pages/RetailerOrders.jsx
+
 import React, { useEffect, useState } from 'react';
 import { Package, CheckCircle, Truck, Clock, XCircle, MapPin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -26,11 +28,7 @@ function RetailerOrders() {
     const handleStatusUpdate = async (item, newStatus) => {
 
         // --- 1. STOCK CHECK LOGIC ---
-        // Only run if moving TO 'delivering' (Shipping the item)
         if (newStatus === 'delivering' && item.order_status === 'pending') {
-
-            // Check stock
-            // We try to find the listing ID from the item object
             const listingId = item.listing_id || item.listing?.product_listings_id;
 
             if (!listingId) {
@@ -46,10 +44,8 @@ function RetailerOrders() {
                 return;
             }
 
-            // Deduct Stock
             await adjustListingStock(listingId, -item.quantity);
         }
-        // ---------------------------------
 
         // 2. Confirmation Check
         if (newStatus === 'completed' || newStatus === 'cancelled') {
@@ -72,7 +68,6 @@ function RetailerOrders() {
             alert("Failed to update status.");
             loadOrders();
         }
-        // Removed step 5 (Notify) since we aren't using it yet
     };
 
     const getStatusBadge = (status) => {
@@ -82,6 +77,15 @@ function RetailerOrders() {
             case 'cancelled': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700"><XCircle size={14} /> Cancelled</span>;
             default: return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700"><Clock size={14} /> Pending</span>;
         }
+    };
+
+    // Helper to extract address string safely
+    const getAddressString = (order) => {
+        const addr = order?.shipping_address;
+        if (!addr) return "Address details hidden";
+        // Handle potential column naming differences (address1 vs address)
+        const line1 = addr.address1 || addr.address || "";
+        return `${line1}, ${addr.city || ""} - ${addr.pincode || ""}`;
     };
 
     return (
@@ -124,10 +128,8 @@ function RetailerOrders() {
                                                 <span className="font-bold text-slate-800">{item.order?.buyer?.name || "Unknown Customer"}</span>
                                                 <div className="flex items-start gap-1 text-xs text-slate-500">
                                                     <MapPin size={14} className="mt-0.5 shrink-0" />
-                                                    <span>
-                                                        {item.order
-                                                            ? `${item.order.address1}, ${item.order.city} - ${item.order.pincode}`
-                                                            : "Address details hidden"}
+                                                    <span className="truncate max-w-[200px]">
+                                                        {getAddressString(item.order)}
                                                     </span>
                                                 </div>
                                             </div>

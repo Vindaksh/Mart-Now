@@ -127,9 +127,14 @@ export const getAllProducts = async () => {
             image_url,
             listings: product_listings (
                 product_listings_id,
-                seller_id,
                 price,
-                stock
+                stock,
+                seller_id,
+                seller: users!product_listings_seller_id_fkey (
+                    name,
+                    user_role,
+                    location
+                )
             )
         `);
 
@@ -139,9 +144,9 @@ export const getAllProducts = async () => {
     }
 
     // Compute lowest price for each product
-    return data.map(product => {
+    return data.map((product: any) => {
         const lowestPrice = product.listings?.length
-            ? Math.min(...product.listings.map(l => l.price))
+            ? Math.min(...product.listings.map((l: any) => l.price))
             : null;
 
         return {
