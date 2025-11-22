@@ -359,7 +359,7 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                         {filtered.map(product => (
                             <div key={product.id} className="h-full">
-                                <ProductCard product={product} />
+                                <ProductCard product={product} displayDist={true}/>
                             </div>
                         ))}
                     </div>

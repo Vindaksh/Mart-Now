@@ -69,7 +69,6 @@ export function groupListingsByProduct(listings: FilteredListingsInterface[]): F
             distance_from_user: distance_km,
             seller: {
                 name: seller_name,
-                location: null,
                 user_role: seller_role,
             },
             productInfo: {

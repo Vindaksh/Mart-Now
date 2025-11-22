@@ -100,8 +100,7 @@ function ProductDetailPage() {
     };
 
     const handleAddToCart = () => {
-        // Pass the full listing object to addToCart, not just the ID
-        if (selectedListing) addToCart(selectedListing);
+        if (selectedListing) addToCart(selectedListing.product_listings_id);
     };
 
     const availableListings = product.listings.filter(l => l.stock > 0);

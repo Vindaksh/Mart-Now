@@ -24,7 +24,6 @@ export type ListingInterface = {
     seller_id: string;
     seller: {
         name: string;
-        location: unknown;
         user_role?: 'customer' | 'retailer' | 'wholesaler';
     };
     productInfo: {

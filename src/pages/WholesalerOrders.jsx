@@ -1,7 +1,70 @@
-import React from 'react';
-import { CheckCircle, Clock, Truck } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle, Clock, Truck, XCircle, MapPin } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getSellerOrders, updateOrderItemStatus } from '../utils/OrderDB';
+import { checkStockAvailability, adjustListingStock } from '../utils/InventoryDB';
 
 function WholesalerOrders() {
+    const { user } = useAuth();
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const loadOrders = async () => {
+        if (!user) return;
+        const data = await getSellerOrders(user.id);
+        const activeOrders = data.filter(order =>
+            order.order_status !== 'completed' && order.order_status !== 'cancelled'
+        );
+        setOrders(activeOrders);
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        loadOrders();
+    }, [user]);
+
+    const handleStatusUpdate = async (item, newStatus) => {
+        // 1. STOCK CHECK (When Shipping)
+        if (newStatus === 'delivering' && item.order_status === 'pending') {
+            const listingId = item.listing_id || item.listing?.product_listings_id;
+
+            if (!listingId) return alert("Error: Could not identify listing.");
+
+            const isAvailable = await checkStockAvailability(listingId, item.quantity);
+            if (!isAvailable) {
+                return alert(`❌ INSUFFICIENT BULK STOCK!\n\nRetailer ordered: ${item.quantity} units.\nYou do not have enough stock.`);
+            }
+
+            await adjustListingStock(listingId, -item.quantity);
+        }
+
+        // 2. Confirmation
+        if (newStatus === 'completed' || newStatus === 'cancelled') {
+            if (!window.confirm("Are you sure you want to finalize this order?")) return;
+        }
+
+        // 3. Update UI
+        setOrders(prev => prev.map(o =>
+            o.order_item_id === item.order_item_id ? { ...o, order_status: newStatus } : o
+        ));
+
+        // 4. Update DB
+        const { error } = await updateOrderItemStatus(item.order_item_id, newStatus);
+        if (error) {
+            alert("Failed to update status.");
+            loadOrders();
+        }
+    };
+
+    const getStatusBadge = (status) => {
+        switch (status) {
+            case 'completed': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700"><CheckCircle size={14} /> Delivered</span>;
+            case 'delivering': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700"><Truck size={14} /> Shipping</span>;
+            case 'cancelled': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700"><XCircle size={14} /> Cancelled</span>;
+            default: return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700"><Clock size={14} /> New Request</span>;
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div>
@@ -14,47 +77,51 @@ function WholesalerOrders() {
                     <table className="w-full text-left text-sm">
                         <thead className="bg-rose-50/50 text-slate-700 font-bold uppercase tracking-wider">
                             <tr>
-                                <th className="px-8 py-5">Order ID</th>
-                                <th className="px-6 py-5">Retailer</th>
-                                <th className="px-6 py-5">Items</th>
+                                <th className="px-8 py-5">Order Details</th>
+                                <th className="px-6 py-5">Retailer Info</th>
                                 <th className="px-6 py-5">Status</th>
                                 <th className="px-8 py-5 text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {/* Order 1 */}
-                            <tr className="hover:bg-rose-50/30 transition-colors">
-                                <td className="px-8 py-5 font-mono font-bold text-slate-600">#PO-8832</td>
-                                <td className="px-6 py-5 font-bold text-slate-900">Fresh Mart Ltd.</td>
-                                <td className="px-6 py-5 text-slate-600">10x Rice Bags</td>
-                                <td className="px-6 py-5">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-700">
-                                        <Clock size={14} /> New Request
-                                    </span>
-                                </td>
-                                <td className="px-8 py-5 text-right">
-                                    <button className="inline-flex items-center gap-2 text-xs font-bold bg-slate-900 text-white px-4 py-2 rounded-xl hover:bg-rose-600 transition-all shadow-lg shadow-slate-200 hover:shadow-rose-200">
-                                        <Truck size={14} /> Ship Order
-                                    </button>
-                                </td>
-                            </tr>
-
-                            {/* Order 2 */}
-                            <tr className="hover:bg-rose-50/30 transition-colors">
-                                <td className="px-8 py-5 font-mono font-bold text-slate-600">#PO-8831</td>
-                                <td className="px-6 py-5 font-bold text-slate-900">Green Grocers</td>
-                                <td className="px-6 py-5 text-slate-600">50x Apple Crates</td>
-                                <td className="px-6 py-5">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                                        <CheckCircle size={14} /> Fulfilled
-                                    </span>
-                                </td>
-                                <td className="px-8 py-5 text-right">
-                                    <button className="text-xs font-bold text-slate-400 px-4 py-2 cursor-not-allowed" disabled>
-                                        View Details
-                                    </button>
-                                </td>
-                            </tr>
+                        <tbody className="divide-y divide-rose-50">
+                            {loading ? (
+                                <tr><td colSpan="4" className="px-8 py-10 text-center text-slate-400">Loading orders...</td></tr>
+                            ) : orders.length === 0 ? (
+                                <tr><td colSpan="4" className="px-8 py-10 text-center text-slate-400">No pending orders.</td></tr>
+                            ) : (
+                                orders.map((item) => (
+                                    <tr key={item.order_item_id} className="hover:bg-rose-50/30 transition-colors">
+                                        <td className="px-8 py-5">
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-slate-900 text-base">{item.name}</span>
+                                                <span className="text-xs text-slate-500">Qty: {item.quantity} • Total: ₹{item.price * item.quantity}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="font-bold text-slate-800">{item.order?.buyer?.name || "Unknown Retailer"}</span>
+                                                <div className="flex items-start gap-1 text-xs text-slate-500">
+                                                    <MapPin size={14} className="mt-0.5 shrink-0" />
+                                                    <span>{item.order ? `${item.order.city}, ${item.order.pincode}` : "N/A"}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-5">{getStatusBadge(item.order_status)}</td>
+                                        <td className="px-8 py-5 text-right">
+                                            <select
+                                                className="bg-white border border-rose-200 text-slate-700 text-xs font-bold py-2 px-3 rounded-xl outline-none focus:ring-2 focus:ring-rose-500 cursor-pointer"
+                                                value={item.order_status}
+                                                onChange={(e) => handleStatusUpdate(item, e.target.value)}
+                                            >
+                                                <option value="pending">Pending</option>
+                                                <option value="delivering">Ship Order</option>
+                                                <option value="completed">Complete</option>
+                                                <option value="cancelled">Cancel</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
