@@ -63,8 +63,9 @@ function ProfilePage() {
 }
 
 const ActionGrid = () => {
-  const { user, logout } = useAuth(); // Destructure user here to check role
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const role = user?.role; // Get role once for cleaner conditionals
 
   const handleLogout = async () => {
     await logout();
@@ -72,42 +73,46 @@ const ActionGrid = () => {
   };
 
   // DYNAMIC LABEL LOGIC
-  const ordersLabel = user?.role === 'retailer' ? "Wholesale Purchases" : "My Orders";
-  const ordersSubtext = user?.role === 'retailer' ? "Track inventory you bought" : "View past orders";
+  const ordersLabel = role === 'retailer' ? "Wholesale Purchases" : "My Orders";
+  const ordersSubtext = role === 'retailer' ? "Track inventory you bought" : "View past orders";
 
   return (
     <>
       {/* Actions Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-        {/* Your Cart Button */}
-        <button
-          onClick={() => navigate('/cart')}
-          className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm border border-rose-100 hover:shadow-md hover:border-rose-200 transition-all text-left group"
-        >
-          <div className="p-3 bg-rose-100 text-rose-600 rounded-xl group-hover:bg-rose-500 group-hover:text-white transition-colors">
-            <ShoppingCart size={24} />
-          </div>
-          <div>
-            <h3 className="font-bold text-slate-800">Your Cart</h3>
-            <p className="text-sm text-slate-500">View pending items</p>
-          </div>
-        </button>
+        {/* Your Cart Button (Conditional for Wholesaler) */}
+        {role !== 'wholesaler' && (
+          <button
+            onClick={() => navigate('/cart')}
+            className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm border border-rose-100 hover:shadow-md hover:border-rose-200 transition-all text-left group"
+          >
+            <div className="p-3 bg-rose-100 text-rose-600 rounded-xl group-hover:bg-rose-500 group-hover:text-white transition-colors">
+              <ShoppingCart size={24} />
+            </div>
+            <div>
+              <h3 className="font-bold text-slate-800">Your Cart</h3>
+              <p className="text-sm text-slate-500">View pending items</p>
+            </div>
+          </button>
+        )}
 
-        {/* Profile Orders Button */}
-        <button
-          onClick={() => navigate('/profile/orders')}
-          className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm border border-rose-100 hover:shadow-md hover:border-rose-200 transition-all text-left group"
-        >
-          <div className="p-3 bg-slate-100 text-slate-600 rounded-xl group-hover:bg-slate-800 group-hover:text-white transition-colors">
-            <ClipboardList size={24} />
-          </div>
-          <div>
-            {/* Dynamic Labels */}
-            <h3 className="font-bold text-slate-800">{ordersLabel}</h3>
-            <p className="text-sm text-slate-500">{ordersSubtext}</p>
-          </div>
-        </button>
+        {/* Profile Orders Button (Conditional for Wholesaler) */}
+        {role !== 'wholesaler' && (
+          <button
+            onClick={() => navigate('/profile/orders')}
+            className="flex items-center gap-4 p-6 bg-white rounded-2xl shadow-sm border border-rose-100 hover:shadow-md hover:border-rose-200 transition-all text-left group"
+          >
+            <div className="p-3 bg-slate-100 text-slate-600 rounded-xl group-hover:bg-slate-800 group-hover:text-white transition-colors">
+              <ClipboardList size={24} />
+            </div>
+            <div>
+              {/* Dynamic Labels */}
+              <h3 className="font-bold text-slate-800">{ordersLabel}</h3>
+              <p className="text-sm text-slate-500">{ordersSubtext}</p>
+            </div>
+          </button>
+        )}
 
         {/* Profile Addresses Button */}
         <button

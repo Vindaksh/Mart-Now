@@ -1,58 +1,134 @@
-import React from 'react';
-import { Package, TrendingUp, Users, DollarSign } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { DollarSign, ShoppingBag, Users, AlertTriangle, TrendingUp, Package, Truck, ArrowRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getSellerOrders, updateOrderItemStatus } from '../utils/OrderDB';
+import { getRetailerListings } from '../utils/InventoryDB';
+import { useNavigate } from 'react-router-dom';
 
 function WholesalerDashboard() {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+
+    const [stats, setStats] = useState({
+        sales: 0,
+        pending: 0,
+        lowStock: 0,
+        customers: 0
+    });
+    const [recentOrders, setRecentOrders] = useState([]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!user) return;
+
+            const [ordersData, inventoryData] = await Promise.all([
+                getSellerOrders(user.id),
+                getRetailerListings(user.id)
+            ]);
+
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+
+            let todaySales = 0;
+            let pendingCount = 0;
+            const recentBuyers = new Set();
+            let lowStockCount = 0;
+
+            ordersData.forEach(item => {
+                if (item.order_status !== 'cancelled') {
+                    if (new Date(item.order?.ordered_at) >= startOfDay) {
+                        todaySales += (item.price * item.quantity);
+                    }
+                    if (item.order.buyer?.name) recentBuyers.add(item.order.buyer.name);
+                }
+                if (item.order_status === 'pending' || item.order_status === 'delivering') {
+                    pendingCount++;
+                }
+            });
+
+            inventoryData.forEach(item => {
+                if (item.stock < 50) lowStockCount++; // Higher threshold for bulk
+            });
+
+            setStats({
+                sales: todaySales,
+                pending: pendingCount,
+                lowStock: lowStockCount,
+                customers: recentBuyers.size
+            });
+
+            setRecentOrders(ordersData.filter(o => o.order_status === 'pending' || o.order_status === 'delivering').slice(0, 5));
+            setLoading(false);
+        };
+
+        fetchData();
+    }, [user]);
+
+    if (loading) return <div className="p-10 text-center text-rose-400 font-bold animate-pulse">Loading dashboard...</div>;
+
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-fade-in">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-extrabold text-slate-900">Dashboard Overview</h1>
-                    <p className="text-slate-500 mt-2">Welcome back! Here's what's happening with your supply chain today.</p>
-                </div>
-                <div className="text-sm font-bold text-rose-500 bg-rose-50 px-4 py-2 rounded-xl border border-rose-100">
-                    📅 {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    <h1 className="text-3xl font-extrabold text-slate-900">Wholesale Overview</h1>
+                    <p className="text-slate-500 mt-2">Track your bulk supply chain performance.</p>
                 </div>
             </div>
 
-            {/* Stat Cards Grid */}
+            {/* Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                    { label: 'Total Revenue', value: '₹1.2L', icon: DollarSign, color: 'bg-green-100 text-green-600' },
-                    { label: 'Active Orders', value: '12', icon: Package, color: 'bg-rose-100 text-rose-600' },
-                    { label: 'Retail Partners', value: '24', icon: Users, color: 'bg-orange-100 text-orange-600' },
-                    { label: 'Growth', value: '+18%', icon: TrendingUp, color: 'bg-blue-100 text-blue-600' },
-                ].map((stat, index) => (
-                    <div key={index} className="bg-white p-6 rounded-[2rem] shadow-sm border border-rose-100 hover:shadow-md hover:-translate-y-1 transition-all duration-300">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className={`p-3 rounded-2xl ${stat.color}`}>
-                                <stat.icon size={24} />
-                            </div>
-                            <span className="text-sm font-bold text-slate-400">Last 30 Days</span>
-                        </div>
-                        <h3 className="text-3xl font-extrabold text-slate-900">{stat.value}</h3>
-                        <p className="text-slate-500 font-medium">{stat.label}</p>
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-rose-100 hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 rounded-2xl bg-green-100 text-green-600"><DollarSign size={24} /></div>
                     </div>
-                ))}
+                    <h3 className="text-3xl font-extrabold text-slate-900">₹{stats.sales.toLocaleString('en-IN')}</h3>
+                    <p className="text-slate-500 font-bold text-sm mt-1">Today's Revenue</p>
+                </div>
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-rose-100 hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 rounded-2xl bg-rose-100 text-rose-600"><ShoppingBag size={24} /></div>
+                    </div>
+                    <h3 className="text-3xl font-extrabold text-slate-900">{stats.pending}</h3>
+                    <p className="text-slate-500 font-bold text-sm mt-1">Pending Shipments</p>
+                </div>
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-rose-100 hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 rounded-2xl bg-orange-100 text-orange-600"><AlertTriangle size={24} /></div>
+                    </div>
+                    <h3 className="text-3xl font-extrabold text-slate-900">{stats.lowStock}</h3>
+                    <p className="text-slate-500 font-bold text-sm mt-1">Low Bulk Stock</p>
+                </div>
+                <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-rose-100 hover:shadow-md transition-all">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-600"><Users size={24} /></div>
+                    </div>
+                    <h3 className="text-3xl font-extrabold text-slate-900">{stats.customers}</h3>
+                    <p className="text-slate-500 font-bold text-sm mt-1">Active Retailers</p>
+                </div>
             </div>
 
-            {/* Recent Activity Section */}
+            {/* Live Orders */}
             <div className="bg-white rounded-[2rem] shadow-sm border border-rose-100 p-8">
-                <h2 className="text-xl font-bold text-slate-900 mb-6">Recent Activity</h2>
-                <div className="space-y-6">
-                    {[
-                        { text: "Order #1024 delivered to 'Sunshine Grocers'", time: "2 hours ago" },
-                        { text: "New stock added: Premium Basmati Rice (50kg)", time: "5 hours ago" },
-                        { text: "New retailer 'City Mart' joined your network", time: "1 day ago" },
-                    ].map((item, i) => (
-                        <div key={i} className="flex items-center gap-4 pb-6 border-b border-slate-50 last:border-0 last:pb-0">
-                            <div className="h-3 w-3 rounded-full bg-rose-500"></div>
-                            <div className="flex-1">
-                                <p className="font-medium text-slate-800">{item.text}</p>
-                                <p className="text-sm text-slate-400">{item.time}</p>
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-slate-900">Live Orders</h2>
+                    <button onClick={() => navigate('/admin/wholesaler/orders')} className="text-sm font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1">View All <ArrowRight size={16} /></button>
+                </div>
+                <div className="space-y-4">
+                    {recentOrders.map((order) => (
+                        <div key={order.order_item_id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-transparent hover:border-rose-200 transition-colors">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-full bg-white shadow-sm flex items-center justify-center font-bold text-slate-700 text-xs">#{order.order_item_id}</div>
+                                <div>
+                                    <p className="font-bold text-slate-800">{order.name}</p>
+                                    <p className="text-xs text-slate-500 font-medium">{order.quantity} units • {order.order?.buyer?.name || 'Unknown'}</p>
+                                </div>
                             </div>
+                            <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-lg">{order.order_status}</span>
                         </div>
                     ))}
+                    {recentOrders.length === 0 && <p className="text-center text-slate-400 italic py-4">No pending orders.</p>}
                 </div>
             </div>
         </div>

@@ -58,6 +58,7 @@ function DashboardLayout() {
                                 <SidebarLink to="" icon={LayoutDashboard} label="Overview" end />
                                 <SidebarLink to="inventory" icon={Package} label="Manage Stock" />
                                 <SidebarLink to="orders" icon={ShoppingBag} label="Retailer Orders" />
+                                <SidebarLink to="history" icon={Clock} label="Sales History" />
                             </>
                         )}
                     </nav>
