@@ -55,7 +55,8 @@ const RegistrationFlow = () => {
     setStep(step - 1);
   };
 
-  const handleFormDataChange = (data: { [key: string]: string }) => {
+  // Updated interface for handleFormDataChange to handle number/null types
+  const handleFormDataChange = (data: { [key: string]: string | number | null }) => {
     setFormData(prev => ({ ...prev, ...data }));
   };
 
@@ -104,14 +105,14 @@ const RegistrationFlow = () => {
 
   return (
     <div>
-      {/* Progress Bar */}
+      {/* Progress Bar (Increased text size and bar height) */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-2 px-1">
-          <span className={`text-xs font-bold ${step >= 1 ? 'text-rose-500' : 'text-slate-300'}`}>Account</span>
-          <span className={`text-xs font-bold ${step >= 2 ? 'text-rose-500' : 'text-slate-300'}`}>Details</span>
-          <span className={`text-xs font-bold ${step >= 3 ? 'text-rose-500' : 'text-slate-300'}`}>Verify</span>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <span className={`text-sm font-bold ${step >= 1 ? 'text-rose-500' : 'text-slate-300'}`}>Account</span>
+          <span className={`text-sm font-bold ${step >= 2 ? 'text-rose-500' : 'text-slate-300'}`}>Details</span>
+          <span className={`text-sm font-bold ${step >= 3 ? 'text-rose-500' : 'text-slate-300'}`}>Verify</span>
         </div>
-        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
           <div
             className="h-full bg-rose-500 transition-all duration-500 ease-out"
             style={{ width: `${(step / 3) * 100}%` }}
@@ -119,11 +120,11 @@ const RegistrationFlow = () => {
         </div>
       </div>
 
-      {/* Error Display */}
+      {/* Error Display (Increased padding, text, and icon size) */}
       {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <AlertTriangle className="text-red-500 shrink-0" size={20} />
-          <p className="text-sm text-red-600 font-medium">{error}</p>
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-5 flex items-start gap-3">
+          <AlertTriangle className="text-red-500 shrink-0" size={24} />
+          <p className="text-base text-red-600 font-medium">{error}</p>
         </div>
       )}
 

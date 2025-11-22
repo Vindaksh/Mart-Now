@@ -17,7 +17,9 @@ function RegisterPage() {
                 </p>
             </div>
 
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+            {/* 👇 MODIFICATION HERE: Removed sm:max-w-md to allow width expansion */}
+            {/* The flow component will now dictate the maximum width */}
+            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg">
                 <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-slate-200">
                     <RegistrationFlow />
                 </div>

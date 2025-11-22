@@ -1,16 +1,43 @@
 import React, { useState, ChangeEvent } from 'react';
-import { MapPin, ArrowLeft, Check } from 'lucide-react';
+import { MapPin, ArrowLeft, Check, X, LocateFixed } from 'lucide-react';
+// Assuming GeoPickerMap and LocationInterface are available for this step
+import { GeoPickerMap, LocationInterface } from '../GeoPickerMap'; 
+import { OnLocationPicedInterface } from '../GeoPickerMap';
+
+
+// Define an interface for the location data structure expected from the GeoPicker
+interface PickerLocation extends LocationInterface {
+    formatted_address: string;
+}
 
 interface Step2Props {
     onNext: (e: React.FormEvent<HTMLFormElement>) => void;
     onPrev: () => void;
-    onChange: (data: { [key: string]: string }) => void;
-    initialFormData: { role: "Customer" | "Retailer" | "Wholesaler", name: string, latitude: number | null, longitude: number | null };
+    onChange: (data: { [key: string]: string | number | null }) => void; // Updated onChange to support number/null
+    initialFormData: { 
+        role: "Customer" | "Retailer" | "Wholesaler", 
+        name: string, 
+        latitude: number | null, 
+        longitude: number | null,
+        formatted_address?: string | null // Added optional address field for display
+    };
 }
 
 const Step2 = ({ onNext, onPrev, onChange, initialFormData }: Step2Props) => {
-    const [formData, setFormData] = useState(initialFormData);
-    const [locLoading, setLocLoading] = useState(false);
+    // Ensure initialFormData has a default formatted_address for state consistency
+    const initialAddress = initialFormData.formatted_address || null;
+    
+    const [formData, setFormData] = useState({ 
+        ...initialFormData,
+        formatted_address: initialAddress 
+    });
+    
+    // State to control the visibility of the map picker
+    const [isMapOpen, setIsMapOpen] = useState(false);
+    
+    // Determine if location data is present for validation/display
+    const isLocationSet = formData.latitude !== null && formData.longitude !== null;
+
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -24,32 +51,35 @@ const Step2 = ({ onNext, onPrev, onChange, initialFormData }: Step2Props) => {
         onChange({ [name]: value });
     };
 
-    const handleCurrentLocation = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-        e.preventDefault(); // Prevent form submit
-        setLocLoading(true);
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    setFormData({ ...formData, latitude, longitude });
-                    onChange({ "latitude": String(latitude), "longitude": String(longitude) });
-                    setLocLoading(false);
-                },
-                (error) => {
-                    console.error("Error getting location: ", error);
-                    alert("Could not get location. Please enter manually.");
-                    setLocLoading(false);
-                }
-            )
-        } else {
-            console.error("Geolocation not supported");
-            setLocLoading(false);
-        }
-    }
+    const handleLocationPicked:OnLocationPicedInterface = (location) => {
+        // Update the form state with the received coordinates and formatted address
+        const updatedLocationData = {
+            latitude: location.lat,
+            longitude: location.lng,
+            formatted_address: location.formatted_address,
+        };
+        
+        setFormData(prev => ({ 
+            ...prev, 
+            ...updatedLocationData 
+        }));
+        
+        // Notify parent component
+        onChange(updatedLocationData); 
+        
+        // Close the map
+        setIsMapOpen(false);
+    };
 
     // Shared styles
     const labelClass = "block text-sm font-bold text-slate-700 mb-1";
     const inputClass = "appearance-none block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 sm:text-sm bg-slate-50/50 transition-all";
+
+    // Validation Check for form submission
+    const isSubmitDisabled = 
+        formData.role !== 'Customer' && !isLocationSet ||
+        isMapOpen || 
+        formData.name.trim() === '';
 
     return (
         <form className="space-y-6" onSubmit={onNext}>
@@ -92,45 +122,69 @@ const Step2 = ({ onNext, onPrev, onChange, initialFormData }: Step2Props) => {
                 {/* Location Section (Only for Sellers) */}
                 {(formData.role !== 'Customer') && (
                     <div className="bg-rose-50 rounded-2xl p-5 border border-rose-100">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold text-rose-700">Business Location</h3>
-                            <button
-                                onClick={handleCurrentLocation}
-                                type="button"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-lg transition-colors shadow-sm"
-                            >
-                                {locLoading ? 'Locating...' : <><MapPin size={14} /> Get Current Location</>}
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label htmlFor="latitude" className="block text-xs font-semibold text-slate-500 mb-1">Latitude</label>
-                                <input
-                                    id="latitude"
-                                    type="number"
-                                    step={0.000001}
-                                    name="latitude"
-                                    value={formData.latitude || ''}
-                                    onChange={handleChange}
-                                    required
-                                    className="block w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none"
-                                />
+                        <h3 className="text-sm font-bold text-rose-700 mb-3">Business Location</h3>
+                        
+                        {/* Location Display/Picker Toggle */}
+                        {isLocationSet && !isMapOpen ? (
+                            <div className="p-4 bg-white rounded-xl border border-rose-200">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <MapPin size={20} className="text-rose-500"/>
+                                        <p className="font-semibold text-slate-800">Location Set</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setIsMapOpen(true)}
+                                        type="button"
+                                        className="text-xs font-bold text-rose-500 hover:text-rose-700 transition-colors"
+                                    >
+                                        Change Location
+                                    </button>
+                                </div>
+                                <p className="text-sm text-slate-600 truncate">
+                                    {formData.formatted_address || `Lat: ${formData.latitude}, Lng: ${formData.longitude}`}
+                                </p>
                             </div>
-                            <div>
-                                <label htmlFor="longitude" className="block text-xs font-semibold text-slate-500 mb-1">Longitude</label>
-                                <input
-                                    id="longitude"
-                                    type="number"
-                                    step={0.000001}
-                                    name="longitude"
-                                    value={formData.longitude || ''}
-                                    onChange={handleChange}
-                                    required
-                                    className="block w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-rose-500 focus:outline-none"
-                                />
-                            </div>
-                        </div>
+                        ) : (
+                            isMapOpen ? (
+                                // GeoPicker is Open
+                                <div className="p-4 border border-rose-200 rounded-xl bg-white shadow-inner">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <p className="text-sm font-semibold text-slate-700 flex items-center gap-1">
+                                            <LocateFixed size={16}/> Pin your business on the map
+                                        </p>
+                                        <button 
+                                            type='button'
+                                            onClick={() => setIsMapOpen(false)} 
+                                            className="p-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors"
+                                        >
+                                            <X size={18} />
+                                        </button>
+                                    </div>
+                                    <GeoPickerMap 
+                                        onLocationPicked={handleLocationPicked}
+                                        submitText="Confirm Business Location"
+                                        successText="Location Selected"
+                                    />
+                                </div>
+                            ) : (
+                                // Location is not set and map is closed (Initial state)
+                                <button
+                                    onClick={() => setIsMapOpen(true)}
+                                    type="button"
+                                    className="w-full py-4 border-2 border-dashed border-rose-200 rounded-2xl text-rose-500 hover:bg-rose-100/50 transition-colors flex flex-col items-center justify-center gap-1"
+                                >
+                                    <MapPin size={24} />
+                                    <p className="font-bold text-sm">Select Business Location</p>
+                                </button>
+                            )
+                        )}
+                        
+                        {/* Location Required Error */}
+                        {!isLocationSet && !isMapOpen && (
+                            <p className="text-xs text-red-500 mt-2 font-medium">
+                                A map location is required for Retailers and Wholesalers.
+                            </p>
+                        )}
                     </div>
                 )}
             </div>
@@ -146,7 +200,8 @@ const Step2 = ({ onNext, onPrev, onChange, initialFormData }: Step2Props) => {
                 </button>
                 <button
                     type="submit"
-                    className="flex-[2] flex justify-center items-center py-3 px-4 border border-transparent rounded-2xl shadow-lg shadow-rose-200 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 hover:-translate-y-0.5 transition-all"
+                    disabled={isSubmitDisabled}
+                    className="flex-[2] flex justify-center items-center py-3 px-4 border border-transparent rounded-2xl shadow-lg shadow-rose-200 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Complete Registration <Check size={16} className="ml-2" />
                 </button>

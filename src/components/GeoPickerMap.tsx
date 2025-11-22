@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { AlertTriangle, Search } from "lucide-react";
+import { AlertTriangle, Search, LocateFixed } from "lucide-react"; // Imported LocateFixed for the new button
 import { GoogleMap, useJsApiLoader, Marker, Autocomplete } from '@react-google-maps/api';
 
 // --- CONFIGURATION ---
@@ -20,6 +20,7 @@ export const GeoPickerMap = ({ onLocationPicked, submitText, successText }: GeoP
 
     const [selectedLocation, setSelectedLocation] = useState<{ lat: number, lng: number } | null>(null);
     const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+    const [isLocating, setIsLocating] = useState(false); // New state for loading indicator
 
     const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
     const geocoderRef = useRef<google.maps.Geocoder | null>(null);
@@ -38,13 +39,7 @@ export const GeoPickerMap = ({ onLocationPicked, submitText, successText }: GeoP
         }
     }, [isLoaded]);
 
-    const resetForm = () => {
-        setSelectedLocation(null);
-        setStatusMessage(null);
-        if (addressInputRef.current) {
-            addressInputRef.current.value = "";
-        }
-    };
+    // **REMOVED** the resetForm function as requested
 
     // Function to parse place details and set location state
     const setLocationFromPlace = (place: google.maps.places.PlaceResult, lat: number, lng: number) => {
@@ -87,9 +82,53 @@ export const GeoPickerMap = ({ onLocationPicked, submitText, successText }: GeoP
                 setLocationFromPlace(place, lat, lng);
             } else {
                 console.error('Geocoder failed due to: ' + status);
-                setStatusMessage({ type: 'error', message: "Could not find a specific address for this location. Use the search bar for better results." });
+                setStatusMessage({ type: 'error', message: "Could not find a specific address for this location. Click again or use the search bar." });
             }
         });
+    };
+    
+    // --- NEW FUNCTIONALITY: Get Current Location ---
+    const handleGetCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            setStatusMessage({ type: 'error', message: "Geolocation is not supported by your browser." });
+            return;
+        }
+        if (!geocoderRef.current) {
+            setStatusMessage({ type: 'error', message: "Map services are still loading. Please wait." });
+            return;
+        }
+
+        setIsLocating(true);
+        setStatusMessage({ type: 'success', message: "Attempting to locate you..." });
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const latLng = new window.google.maps.LatLng(lat, lng);
+
+                // Use Geocoder to get the formatted address
+                geocoderRef.current!.geocode({ location: latLng }, (results, status) => {
+                    setIsLocating(false);
+                    if (status === window.google.maps.GeocoderStatus.OK && results?.[0]) {
+                        setLocationFromPlace(results[0], lat, lng);
+                    } else {
+                        // If Geocoding fails, still set the coordinates
+                        setSelectedLocation({ lat, lng });
+                        setStatusMessage({ type: 'success', message: "Location set to current coordinates. Address could not be resolved." });
+                        if (addressInputRef.current) {
+                            addressInputRef.current.value = `Current Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+                        }
+                    }
+                });
+            },
+            (error) => {
+                setIsLocating(false);
+                console.error('Geolocation Error:', error);
+                setStatusMessage({ type: 'error', message: `Location access denied or failed: ${error.message}` });
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
     };
 
     // The submission handler now runs on a button click, no form event to prevent
@@ -115,7 +154,6 @@ export const GeoPickerMap = ({ onLocationPicked, submitText, successText }: GeoP
     };
 
     return (
-        // 🛑 Removed the <form> tag here!
         <div className="space-y-4">
             {/* Status Message */}
             {statusMessage && (
@@ -160,6 +198,7 @@ export const GeoPickerMap = ({ onLocationPicked, submitText, successText }: GeoP
                     {isLoaded ? (
                         <GoogleMap
                             mapContainerStyle={{ width: "100%", height: "100%" }}
+                            // Center on selected location, then default, then current location if loading
                             center={selectedLocation || DEFAULT_CENTER}
                             zoom={selectedLocation ? 15 : 10}
                             onClick={handleMapClick}
@@ -176,29 +215,33 @@ export const GeoPickerMap = ({ onLocationPicked, submitText, successText }: GeoP
                     )}
                 </div>
 
-                {/* Log Button and Reset Button */}
+                {/* Log Button and Get Current Location Button */}
                 <div className="flex gap-4 pt-4">
-                    {/* 🛑 Changed type="submit" to type="button" and added onClick handler */}
                     <button
                         type="button"
                         onClick={handleSelectLocation} // Calls the function that triggers onLocationPicked
                         className="flex-1 py-4 bg-rose-500 text-white rounded-xl font-bold shadow-lg shadow-rose-200 hover:bg-rose-600 hover:-translate-y-0.5 transition-all"
-                        disabled={!selectedLocation}
+                        disabled={!selectedLocation || isLocating}
                     >
                         {submitText}
                     </button>
+                    {/* 👇 NEW BUTTON: Get Current Location */}
                     <button
                         type="button"
-                        className="px-8 py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all"
-                        onClick={resetForm}
+                        className="flex items-center justify-center gap-1 px-8 py-4 bg-slate-100 text-slate-600 rounded-xl font-bold hover:bg-slate-200 transition-all disabled:opacity-50"
+                        onClick={handleGetCurrentLocation}
+                        disabled={isLocating}
                     >
-                        Reset
+                        <LocateFixed size={20} />
+                        {isLocating ? 'Locating...' : 'My Location'}
                     </button>
                 </div>
             </div>
         </div>
     );
 };
+
+// --- StaticLocationMap component remains unchanged ---
 
 const DEFAULT_ZOOM = 15;
 
