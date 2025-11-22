@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { FilterInterface, getFilteredListings, groupListingsByProduct } from "../utils/productsDB";
 import { FilteredProductInterface, SellerInterface } from "../utils/Interfaces";
 export default function DashboardPage() {
-    const { user } = useAuth();
+    const { user, loading: userLoading } = useAuth();
 
     const [products, setProducts] = useState<FilteredProductInterface[]>([]);
     const [filtered, setFiltered] = useState<FilteredProductInterface[]>([]);
@@ -49,12 +49,20 @@ export default function DashboardPage() {
 
     const loadData = async (filter:FilterInterface) => {
 
+        const allowedRole = user?user.role==="retailer"?"wholesaler":"retailer":"retailer";
+        const sellerData = await ((allowedRole==="retailer")?getAllRetailers():getAllWholesalers()); // Sellers table already filtered by role
+        console.log(allowedRole, sellerData);
+
+
+        if(!filter.sellerIds || filter.sellerIds.length==0) {
+            filter.sellerIds = sellerData.map(i=>i.id);
+            console.log(filter.sellerIds);
+        }
+
         const listings = await getFilteredListings(filter);
         const productData = groupListingsByProduct(listings!);
         // Determine which sellers to show listings from
-        const allowedRole = user?user.role==="retailer"?"wholesaler":"retailer":"retailer";
                     
-        const sellerData = await ((allowedRole==="retailer")?getAllRetailers():getAllWholesalers()); // Sellers table already filtered by role
 
         // Filter listing table
         const cleaned = productData;
@@ -99,11 +107,13 @@ export default function DashboardPage() {
     };
 
     useEffect(() => {
-        setLoading(true);
-        setLoadingProducts(true);
-        
-        loadWithLoc({});
-    }, [user]);
+        if(!userLoading) {
+            setLoading(true);
+            setLoadingProducts(true);
+            
+            loadWithLoc({});
+        }
+    }, [user, userLoading]);
 
     // --- LIVE SEARCH EFFECT ---
     useEffect(() => {
