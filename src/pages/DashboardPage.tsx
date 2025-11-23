@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getAllRetailers, getAllWholesalers } from "../utils/Database";
+import { getAllRetailers, getAllWholesalers, getAllCategories } from "../utils/Database";
 import ProductCard from "../components/ProductCard";
 import PriceSlider from "../components/priceslider";
 import { Check, Filter, Search } from "lucide-react";
@@ -31,6 +31,9 @@ export default function DashboardPage() {
     const [maxDistance, setMaxDistance] = useState("");
     const [sortType, setSortType] = useState("");
     const [priceBounds, setPriceBounds] = useState({ min: 0, max: 5000 });
+    const [categories, setCategories] = useState<{ category_id: string, category_name: string }[]>([]);
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
 
     const [coord, setCoord] = useState<{ lat: number, lng: number } | null>(null);
 
@@ -71,6 +74,9 @@ export default function DashboardPage() {
         if (!filter.sellerIds || filter.sellerIds.length === 0) {
             filter.sellerIds = sellerData.map(i => i.seller_id);
         }
+        // Fetch categories
+        const rawCategories = await getAllCategories();
+        setCategories(rawCategories);
 
         const listings = await getFilteredListings(filter);
 
@@ -152,6 +158,9 @@ export default function DashboardPage() {
             baseFilter.minPrice = minPrice;
             baseFilter.maxPrice = maxPrice;
             baseFilter.sellerIds = (selectedRetailers.length > 0) ? selectedRetailers : undefined;
+            if (selectedCategories.length > 0)
+                baseFilter.categoryIds = selectedCategories;
+
             if (searchTerm !== "") baseFilter.searchTerm = searchTerm;
             if (maxDistance) baseFilter.maxDist = Number(maxDistance);
 
@@ -202,13 +211,15 @@ export default function DashboardPage() {
         const maxP = reset ? priceBounds.max : Number(maxPrice);
         const distanceLimit = maxDistance ? Number(maxDistance) : undefined;
         const sellerIds = reset ? retailers.map(i => i.seller_id) : (selectedRetailers.length > 0) ? selectedRetailers : retailers.map(i => i.seller_id);
+        const categoryIds = reset? categories.map(c => c.category_id) : (selectedCategories.length > 0)? selectedCategories : categories.map(c => c.category_id);
 
         setLoadingProducts(true);
 
         let filter: FilterInterface = {
             minPrice: minP,
             maxPrice: maxP,
-            sellerIds: sellerIds
+            sellerIds: sellerIds,
+            categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
         };
 
         if (searchTerm !== "") {
@@ -249,6 +260,7 @@ export default function DashboardPage() {
         setSelectedRetailers([]);
         setMaxDistance("");
         setSortType("");
+        setSelectedCategories([]);
 
         // Reset with default filter values
         applyFilters(true);
@@ -316,6 +328,35 @@ export default function DashboardPage() {
                             </label>
                         ))}
                         {retailers.length === 0 && <p className="text-sm text-slate-400 italic">No sellers found.</p>}
+                    </div>
+                </div>
+                {/* CATEGORIES */}
+                <div className="mb-8">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Categories</h3>
+                    <div className="space-y-1 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        {categories.map(c => (
+                            <label key={c.category_id} className="flex items-center space-x-3 p-2 rounded-xl hover:bg-rose-50 cursor-pointer transition-colors group">
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border-2 border-slate-200 checked:border-rose-500 checked:bg-rose-500 transition-all"
+                                        checked={selectedCategories.includes(c.category_id)}
+                                        onChange={() =>
+                                            setSelectedCategories(prev =>
+                                                prev.includes(c.category_id)
+                                                    ? prev.filter(id => id !== c.category_id)
+                                                    : [...prev, c.category_id]
+                                            )
+                                        }
+                                    />
+                                    <Check className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100" size={12} strokeWidth={4} />
+                                </div>
+                                <span className="text-sm font-medium text-slate-600 group-hover:text-rose-600 transition-colors">
+                                    {c.category_name}
+                                </span>
+                            </label>
+                        ))}
+                        {categories.length === 0 && <p className="text-sm text-slate-400 italic">No categories found.</p>}
                     </div>
                 </div>
 

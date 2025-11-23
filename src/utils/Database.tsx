@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Database } from "./DatabaseInterfaces";
 import { UserInterface, UserDataInterface, ProductListingInterface, FilteredProductInterface } from "./Interfaces";
 import { FilterInterface, getFilteredListings, groupListingsByProduct } from "./productsDB";
+import { Cat } from "lucide-react";
 
 const SUPABASE_URL = "https://hopvgsttpmoofwlxhkbx.supabase.co";
 const SUPABASE_KEY = "sb_publishable_1TvVZv76Cmle6-R_J8b08g_55S7cK5C";
@@ -123,5 +124,21 @@ export async function getAllWholesalers() {
         seller_id: user.user_id,
         name: user.name,
         user_role: user.user_role
+    }));
+}
+export async function getAllCategories() {
+    const { data, error } = await Supabase
+        .from("categories")
+        .select("category_id, category_name");
+
+    if (error) {
+        console.error("Error fetching categories:", error);
+        return [];
+    }
+    console.log(data);
+    // Standardize naming so frontend stays clean
+    return data.map(cat => ({
+        category_id: cat.category_id,
+        category_name: cat.category_name
     }));
 }
