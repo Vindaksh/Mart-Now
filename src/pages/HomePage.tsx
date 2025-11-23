@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ShoppingCart, Store, Package } from 'lucide-react';
 
+import PawPrintsImage from '../assets/paw_prints.png';
+
+
 function HomePage() {
     const { user } = useAuth();
 
@@ -15,9 +18,21 @@ function HomePage() {
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-full bg-white rounded-b-[50%] shadow-xl shadow-rose-100/50 z-0"></div>
 
                 <div className="relative z-10 max-w-7xl mx-auto py-24 px-4 sm:py-32 sm:px-6 lg:px-8 text-center">
-                    <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:text-7xl mb-6">
-                        Live <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-500">MART</span>
-                    </h1>
+
+                    {/* Logo/Title Section */}
+                    <div className="flex items-center justify-center mb-6">
+                        {/* Updated Text: The Grove */}
+                        <h1 className="text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
+                            The <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-500">Grove</span>
+                        </h1>
+                        {/* Using your PawPrints image */}
+                        <img
+                            src={PawPrintsImage}
+                            alt="Panda Paw Prints"
+                            className="h-12 w-12 ml-2 mt-5 transform rotate-12"
+                        />
+                    </div>
+
                     <p className="mt-4 text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
                         The best way to shop local. Connecting retailers, wholesalers, and customers in one happy loop! 🛍️
                     </p>

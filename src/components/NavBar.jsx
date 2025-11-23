@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { ShoppingCart, LogOut, Store, Menu, X, LayoutDashboard } from 'lucide-react';
+import { ShoppingCart, LogOut, Menu, X, LayoutDashboard } from 'lucide-react';
+
+import SparklePandaLogo from '../assets/sparkle_panda_logo-bg1.png';
 
 function NavBar() {
     const { cartItems } = useCart();
@@ -13,9 +15,8 @@ function NavBar() {
     const cartItemCount = cartItems.reduce((total, item) => total + (item.quantity || 0), 0);
 
     const handleLogout = async () => {
-        navigate('/');
         await logout();
-        
+        navigate('/');
     };
 
     const getRoleLandingPath = (role) => {
@@ -117,12 +118,16 @@ function NavBar() {
                 <div className="flex justify-between h-20">
 
                     <div className="flex items-center">
-                        <Link to={landingPath} className="flex items-center gap-2 group">
-                            <div className="bg-rose-100 p-2 rounded-xl group-hover:bg-rose-200 transition-colors">
-                                <Store className="h-8 w-8 text-rose-600" />
-                            </div>
-                            <span className="text-2xl font-extrabold text-slate-800 tracking-tight">
-                                Live<span className="text-rose-500">MART</span>
+                        <Link to={landingPath} className="flex items-center gap-1 group">
+                            {/* Using your imported image logo */}
+                            <img
+                                src={SparklePandaLogo}
+                                alt="The Grove Logo"
+                                className="h-12 w-12"
+                            />
+                            {/* UPDATED: "Grove" text with brand gradient */}
+                            <span className="text-2xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-500">
+                                Grove
                             </span>
                         </Link>
                     </div>
