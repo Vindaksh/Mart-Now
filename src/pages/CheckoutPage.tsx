@@ -2,15 +2,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
-// 👇 Note: 'initiateStripeCheckout' is imported now
-import { createOrder, completePayment, initiateStripeCheckout } from "../utils/OrderDB";
+import { createOrder, completePayment } from "../utils/OrderDB";
 import { useAuth } from '../context/AuthContext';
 import { getSavedAddresses, saveAddressForUser } from "../utils/AdressDB";
 import { MapPin, CreditCard, Truck, AlertCircle, ArrowLeft, Plus, X, ExternalLink } from 'lucide-react';
 import { SavedAddressInterface } from '../utils/Interfaces';
 import { GeoPickerMap, LocationInterface, StaticLocationMap } from '../components/GeoPickerMap';
-
-// NOTE: We removed 'loadStripe' and 'Elements' because we are redirecting to the hosted page.
 
 interface SelectedAddress extends LocationInterface {
     address_id?: string | null;
@@ -92,11 +89,14 @@ function CheckoutPage() {
 
         setLoading(true);
 
-        // 1. Prepare Payment Object
-        // 👇 FIX: Send "PENDING" instead of null. 
-        // This satisfies the database rule so it allows us to create the order.
-        const initialRef = paymentMethod === 'online' ? "PENDING" : null;
-        const payment = await completePayment(totalPrice, paymentMethod, initialRef);
+
+        const payment = await completePayment(totalPrice, paymentMethod);
+
+        if(payment.error || (paymentMethod==='online'&&!payment.payment_ref)) {
+            alert("Payment failed");
+            setLoading(false);
+            return;
+        }
         
         const addressData = {
             formatted_address: selectedLocation.formatted_address,
@@ -122,22 +122,9 @@ function CheckoutPage() {
             return;
         }
 
-        // 3. Handle Payment Flow
-        if (paymentMethod === 'cod') {
-            await refreshCart(user);
-            navigate("/order-success", { state: { orderId: order.order_id } });
-            setLoading(false);
-        } else {
-            // Online: Redirect to Stripe
-            const { url, error: stripeError } = await initiateStripeCheckout(totalPrice, order.order_id);
-            
-            if (stripeError || !url) {
-                alert(`Payment Gateway Error: ${stripeError}`);
-                setLoading(false);
-            } else {
-                window.location.href = url; 
-            }
-        }
+        setLoading(false);
+        refreshCart();
+        navigate("/order-success");
     };
 
     // Helper Component for Map Card

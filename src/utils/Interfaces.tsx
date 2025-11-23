@@ -46,7 +46,11 @@ export type CartItemInterface = {
 export type OrderInterface = {
     order_id: number;
     ordered_at: string;
-    order_items: OrderItemInterface[]
+    formatted_address: string;
+    lat: number;
+    lng: number;
+    order_items: OrderItemInterface[];
+    payment: PaymentInterface
 }
 
 export type OrderItemInterface = {
@@ -65,7 +69,8 @@ export type PaymentInterface = {
     amount: number;
     is_offline: boolean;
     payment_id: string;
-    ref_no: string | null;
+    ref: string | null;
+    mode: "offline"|"online";
     user_id: string | null;
 }
 
@@ -83,6 +88,8 @@ export interface SavedAddressInterface extends AddressInterface {
 export type OnlinePaymentInterface = {
     payment_ref: string | null;
     payment_mode: "offline" | "online";
+    status: string;
+    error: string|null;
 }
 
 export interface FilteredListingsInterface {

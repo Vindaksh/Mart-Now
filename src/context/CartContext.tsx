@@ -18,7 +18,7 @@ interface CartContextInterface{
     removeFromCart: (item: CartItemInterface) => Promise<void>;
     updateQuantity: (item: CartItemInterface, newQty: number) => Promise<void>;
     clearCart: () => Promise<void>;
-    refreshCart: (user: UserInterface) => Promise<void>;
+    refreshCart: () => Promise<void>;
 }
 const CartContext = createContext<CartContextInterface>({
     cartItems: [],
@@ -27,7 +27,7 @@ const CartContext = createContext<CartContextInterface>({
     removeFromCart: async (item)=>{},
     updateQuantity: async (item)=>{},
     clearCart: async ()=>{},
-    refreshCart: async (user)=>{}
+    refreshCart: async ()=>{}
 });
 
 export function useCart() {

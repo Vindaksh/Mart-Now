@@ -32,7 +32,7 @@ function DashboardLayout() {
     );
 
     return (
-        <div className="min-h-screen bg-rose-50 flex flex-col md:flex-row pt-20">
+        <div className="min-h-screen bg-rose-50 flex flex-col md:flex-row">
 
             {/* Sidebar */}
             <aside className="w-full md:w-72 bg-white/50 backdrop-blur-xl border-r border-rose-100 md:h-[calc(100vh-80px)] sticky top-20 hidden md:flex flex-col justify-between px-6 pb-6 pt-0 overflow-y-auto custom-scrollbar">

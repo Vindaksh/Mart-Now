@@ -28,6 +28,7 @@ import WholesalerInventory from './pages/WholesalerInventory';
 import WholesalerHistory from './pages/WholesalerHistory';
 
 import ProfilePage from "./pages/Profile";
+import PaymentReturn from './stripe/PaymentReturn';
 
 const ALL_ROLES = ['customer', 'retailer', 'wholesaler'];
 const SELLER_ROLES = ['retailer', 'wholesaler'];
@@ -81,6 +82,8 @@ function App() {
 
               {/* 5. Fallback for undefined base admin path (sends unauthorized users to login) */}
               <Route path="/admin" element={<Navigate to="/login" replace />} />
+
+              <Route path="/payment-return" element={<PaymentReturn />} />
 
           </Routes>
         </BrowserRouter>
