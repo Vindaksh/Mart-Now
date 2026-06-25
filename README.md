@@ -5,7 +5,10 @@ This is a robust, React-based web application designed to handle complex multi-v
 
 
 <img width="629" height="379" alt="image" src="https://github.com/user-attachments/assets/29100332-d8f4-49ea-abbe-b0ca3e19b6cd" />
-<img width="900" height="418" alt="image" src="https://github.com/user-attachments/assets/94d90f34-b8bc-4d2c-8544-a205482638ab" />
+<img width="500" height="250" alt="image" src="https://github.com/user-attachments/assets/94d90f34-b8bc-4d2c-8544-a205482638ab" />
+<img width="400" height="250" alt="image" src="https://github.com/user-attachments/assets/83415abf-1693-4f12-832d-906ce6e225a3" />
+
+
 
 ## Features
 ### Multi-Role Ecosystem
